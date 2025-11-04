@@ -12,12 +12,23 @@ const TESTER_IDS = process.env.TESTER_IDS.split(",");
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
 const N8N_AUTH_HEADER = process.env.N8N_AUTH_HEADER;
 
+let isBotActive = false;
+
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+
+  if ((TESTER_IDS.includes(message.author.id) || message.author.id === (process.env.OWNER_ID || 428902961847205899)) && message.content === "!0") {
+    isBotActive = !isBotActive;
+    const status = isBotActive ? "🟢 Bot is now ACTIVE" : "🔴 Bot is now INACTIVE";
+    await message.reply(status);
+    return;
+  }
+
+  if (!isBotActive) return;
 
   const isTester = TESTER_IDS.includes(message.author.id);
   const isTarget = message.author.id === TARGET_USER_ID;
