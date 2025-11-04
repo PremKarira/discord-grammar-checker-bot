@@ -74,7 +74,7 @@ async function analyzeText(message, text, isTest) {
       await message.reply(`⚠️ Bad English detected!\n✅ Correct sentence: ${result.corrected}`);
     
     } else if (isTest) {
-      await message.channel.send/(`kovid`);
+      await message.channel.send(`👍`);
     }
   } catch (err) {
     console.error("❌ Error analyzing text:", err);
