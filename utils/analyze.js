@@ -11,6 +11,7 @@ export async function analyzeText(client, message, text, isTest) {
     lastApiCall = now;
 
     const sanitizedText = text.replace(/\s+/g, " ").trim();
+    const analyzingMsg = await message.react("⏳");
 
     const response = await fetch(process.env.N8N_WEBHOOK_URL, {
       method: "POST",
@@ -31,8 +32,13 @@ export async function analyzeText(client, message, text, isTest) {
     if (!raw) throw new Error("Missing 'final_result'");
     const { status, corrected } = JSON.parse(raw);
 
-    if (status === "bad") await message.reply(`⚠️ Bad English!\n✅ Correct: ${corrected}`);
-    else if (status === "good" && isTest) await message.react("👍");
+    // React or reply based on result
+    if (status === "bad") {
+      await message.react("❌");
+      await message.reply(`⚠️ Bad English!\n✅ Correct: ${corrected}`);
+    } else if (status === "good") {
+      if (isTest) await message.react("✅");
+    }
 
   } catch (err) {
     await reportError(client, err, `AnalyzeText | ${message.author.tag}`);
