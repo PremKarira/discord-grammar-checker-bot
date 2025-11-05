@@ -13,7 +13,13 @@ export async function handleVoiceStateUpdate(oldState, newState) {
     if (voiceTargets.includes(newState.member.id)) {
       const channel = await newState.guild.channels.fetch(TEXT_CHANNEL_ID);
       if (channel) {
-        await channel.send(`🗣️ ${newState.member.displayName || "Someone"} has joined the voice chat.`);
+        const msg = await channel.send(
+          `🗣️ ${newState.member.displayName || "Someone"} has joined the voice chat.`
+        );
+        // Auto delete after 60 seconds
+        setTimeout(() => {
+          msg.delete().catch(() => {});
+        }, 20000);
       }
     }
   } catch (error) {
