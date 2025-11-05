@@ -27,7 +27,7 @@ export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isB
     // TOGGLE
     if ((isOwner || isTester) && content === `${PREFIX}0`) {
       isBotActive.value = !isBotActive.value;
-      await message.reply(isBotActive.value ? "🟢 Bot ACTIVE" : "🔴 Bot INACTIVE");
+      await message.reply(isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot");
       return;
     }
 
