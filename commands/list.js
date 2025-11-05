@@ -2,20 +2,21 @@ export async function listUsers(message, users) {
   const guild = message.guild;
   if (!guild) return message.reply("⚠️ Could not fetch guild members.");
 
-  // Fetch all members to resolve usernames
-  await guild.members.fetch();
+  const targetNames = await Promise.all(
+    users.targets.map(async (id) => {
+      const member = await guild.members.fetch(id).catch(() => null);
+      return member ? member.displayName : id;
+    })
+  );
 
-  const targetNames =
-    users.targets
-      .map(id => guild.members.cache.get(id)?.displayName || id)
-      .join(", ") || "None";
-
-  const testerNames =
-    users.testers
-      .map(id => guild.members.cache.get(id)?.displayName || id)
-      .join(", ") || "None";
+  const testerNames = await Promise.all(
+    users.testers.map(async (id) => {
+      const member = await guild.members.fetch(id).catch(() => null);
+      return member ? member.displayName : id;
+    })
+  );
 
   await message.reply(
-    `📝 **Current Users:**\n\n**Targets:** ${targetNames}\n**Testers:** ${testerNames}`
+    `📝 **Current Users:**\n\n**Targets:** ${targetNames.join(", ") || "None"}\n**Testers:** ${testerNames.join(", ") || "None"}`
   );
 }

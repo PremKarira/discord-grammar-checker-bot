@@ -7,7 +7,13 @@ import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
+  ],
 });
 
 const PREFIX = process.env.DISCORD_PREFIX || "!";
