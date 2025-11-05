@@ -33,3 +33,17 @@ export async function saveUsers(users) {
     { upsert: true }
   );
 }
+
+// Specific helper for voice targets (optional)
+export async function getVoiceTargets() {
+  const doc = await configCollection.findOne({ _id: "users" });
+  return doc?.voiceTargets || [];
+}
+
+export async function saveVoiceTargets(ids) {
+  await configCollection.updateOne(
+    { _id: "users" },
+    { $set: { voiceTargets: ids } },
+    { upsert: true }
+  );
+}
