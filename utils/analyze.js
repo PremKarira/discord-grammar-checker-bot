@@ -37,7 +37,7 @@ export async function analyzeText(client, message, text, isTest) {
       await message.react("❌");
       await message.reply(`⚠️ Bad English!\n✅ Correct: ${corrected}`);
     } else if (status === "good") {
-      if (isTest) await message.react("✅");
+      await message.react("✅");
     }
 
   } catch (err) {
