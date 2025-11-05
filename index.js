@@ -109,6 +109,26 @@ client.on("messageCreate", async (message) => {
     const isTester = TESTER_IDS.includes(message.author.id);
     const isTarget = TARGET_USER_IDS.includes(message.author.id);
 
+    // List targets & testers
+    if ((isTester || isOwner) && message.content === `!list`) {
+      try {
+        const targetMentions =
+          TARGET_USER_IDS.map((id) => `<@${id}>`).join(", ") || "None";
+        const testerMentions =
+          TESTER_IDS.map((id) => `<@${id}>`).join(", ") || "None";
+
+        const replyMsg =
+          `📝 **Current Users:**\n\n` +
+          `**Targets:** ${targetMentions}\n` +
+          `**Testers:** ${testerMentions}`;
+
+        await message.reply(replyMsg);
+      } catch (err) {
+        await reportError(err, "List command");
+      }
+      return;
+    }
+
     // Toggle command (!0)
     if ((isTester || isOwner) && message.content === "!0") {
       isBotActive = !isBotActive;
@@ -148,6 +168,9 @@ client.on("messageCreate", async (message) => {
 
     // Target user(s)
     if (isTarget) {
+      console.log(
+        `📩 Message from target user ${message.author.tag}: ${message.content}`
+      );
       // Send the target's message to the support channel
       try {
         const supportChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
