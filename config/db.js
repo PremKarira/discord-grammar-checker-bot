@@ -22,6 +22,7 @@ export async function getUsers() {
   return {
     testers: doc?.testers || [],
     targets: doc?.targets || [],
+    voiceTargets: doc?.voiceTargets || [],
   };
 }
 
