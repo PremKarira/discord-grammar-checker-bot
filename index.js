@@ -112,7 +112,9 @@ client.on("messageCreate", async (message) => {
     // Toggle command (!0)
     if ((isTester || isOwner) && message.content === "!0") {
       isBotActive = !isBotActive;
-      const status = isBotActive ? "🟢 Bot is now ACTIVE" : "🔴 Bot is now INACTIVE";
+      const status = isBotActive
+        ? "🟢 Bot is now ACTIVE"
+        : "🔴 Bot is now INACTIVE";
       await message.reply(status);
       return;
     }
@@ -129,10 +131,12 @@ client.on("messageCreate", async (message) => {
 
     // 🕵️ Check command (reply-based)
     if (isTester && message.content === "!check") {
-      if (!message.reference) return message.reply("⚠️ Please reply to a message to check.");
+      if (!message.reference)
+        return message.reply("⚠️ Please reply to a message to check.");
       try {
         const repliedMsg = await message.fetchReference();
-        if (!repliedMsg.content) return message.reply("⚠️ Replied message has no text.");
+        if (!repliedMsg.content)
+          return message.reply("⚠️ Replied message has no text.");
         console.log(`👀 Tester checking message: ${repliedMsg.content}`);
         await analyzeText(message, repliedMsg.content, true);
       } catch (err) {
@@ -144,7 +148,25 @@ client.on("messageCreate", async (message) => {
 
     // Target user(s)
     if (isTarget) {
-      await analyzeText(message, message.content, false);
+      // Send the target's message to the support channel
+      try {
+        const supportChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
+        if (supportChannel && message.content) {
+          await supportChannel.send({
+            content: `📨 **Message from target user <@${message.author.id}> (${message.author.tag})**\n> ${message.content}`,
+          });
+        }
+      } catch (err) {
+        await reportError(
+          err,
+          `Forwarding message from target ${message.author.tag}`
+        );
+      }
+
+      // Also run the analyzer if needed
+      if (message.content) {
+        await analyzeText(message, message.content, false);
+      }
     }
   } catch (err) {
     await reportError(err, `Message Handler | ${message.author.tag}`);
