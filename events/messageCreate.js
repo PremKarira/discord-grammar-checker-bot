@@ -3,6 +3,7 @@ import { reportError } from "../utils/reportError.js";
 import { listUsers } from "../commands/list.js";
 import { addTester, removeTester } from "../commands/updateTester.js";
 import { addTarget, removeTarget } from "../commands/updateTarget.js";
+import { addVoiceTarget, removeVoiceTarget } from "../commands/voiceTargets.js";
 import { testCommand } from "../commands/test.js";
 import { checkCommand } from "../commands/check.js";
 import { getUsers } from "../config/db.js";
@@ -49,6 +50,15 @@ export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isB
     }
     if (isOwner && content.startsWith(`${PREFIX}removetarget `)) {
       await removeTarget(message, content.slice(PREFIX.length + 13).trim());
+      return;
+    }
+        // ADD/REMOVE VOICE TARGET
+    if (isOwner && content.startsWith(`${PREFIX}addvoicetarget `)) {
+      await addVoiceTarget(message, content.slice(PREFIX.length + 15).trim());
+      return;
+    }
+    if (isOwner && content.startsWith(`${PREFIX}removevoicetarget `)) {
+      await removeVoiceTarget(message, content.slice(PREFIX.length + 18).trim());
       return;
     }
 

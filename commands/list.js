@@ -16,7 +16,17 @@ export async function listUsers(message, users) {
     })
   );
 
+  const voiceTargetNames = await Promise.all(
+    (users.voiceTargets || []).map(async (id) => {
+      const member = await guild.members.fetch(id).catch(() => null);
+      return member ? member.displayName : id;
+    })
+  );
+
   await message.reply(
-    `📝 **Current Users:**\n\n**Targets:** ${targetNames.join(", ") || "None"}\n**Testers:** ${testerNames.join(", ") || "None"}`
+    `📝 **Current Users:**\n\n` +
+    `🎯 **Targets:** ${targetNames.join(", ") || "None"}\n` +
+    `🧪 **Testers:** ${testerNames.join(", ") || "None"}\n` +
+    `🎙️ **Voice Targets:** ${voiceTargetNames.join(", ") || "None"}`
   );
 }
