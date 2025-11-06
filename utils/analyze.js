@@ -66,8 +66,6 @@ No explanations or extra words.`,
       textResponse = buffer.toString("utf-8");
     }
 
-    console.log("Response received from n8n webhook:", response);
-
     if (!textResponse?.trim()) throw new Error("Empty response from webhook");
 
     // 🧠 Parse JSON or text output
