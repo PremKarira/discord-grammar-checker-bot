@@ -14,7 +14,9 @@ export async function handleVoiceStateUpdate(oldState, newState) {
       const channel = await newState.guild.channels.fetch(TEXT_CHANNEL_ID);
       if (channel) {
         const msg = await channel.send(
-          `🗣️ ${newState.member.displayName || "Someone"} has joined the voice chat.`
+          `🗣️ ${
+            newState.member.displayName || "Someone"
+          } has joined the voice chat.`
         );
         // Auto delete after 60 seconds
         setTimeout(() => {

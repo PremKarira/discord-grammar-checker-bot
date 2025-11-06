@@ -13,9 +13,10 @@ export async function addTester(message, id) {
 export async function removeTester(message, id) {
   if (!id) return message.reply("⚠️ Provide a user ID to remove.");
   const users = await getUsers();
-  if (!users.testers.includes(id)) return message.reply("⚠️ User is not a tester.");
+  if (!users.testers.includes(id))
+    return message.reply("⚠️ User is not a tester.");
 
-  users.testers = users.testers.filter(u => u !== id);
+  users.testers = users.testers.filter((u) => u !== id);
   await saveUsers(users);
   await message.reply(`✅ Removed <@${id}> from testers.`);
 }

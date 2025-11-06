@@ -12,7 +12,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
@@ -31,7 +31,6 @@ client.once("clientReady", () => {
 client.on("messageCreate", async (message) => {
   await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
 });
-
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
   try {

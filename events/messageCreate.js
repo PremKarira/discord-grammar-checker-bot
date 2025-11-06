@@ -8,7 +8,13 @@ import { testCommand } from "../commands/test.js";
 import { checkCommand } from "../commands/check.js";
 import { getUsers } from "../config/db.js";
 
-export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive) {
+export async function handleMessageCreate(
+  client,
+  message,
+  PREFIX,
+  OWNER_ID,
+  isBotActive
+) {
   try {
     if (message.author.bot) return;
 
@@ -27,11 +33,14 @@ export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isB
     // TOGGLE
     if ((isOwner || isTester) && content === `${PREFIX}0`) {
       isBotActive.value = !isBotActive.value;
-      await message.reply(isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot");
+      await message.reply(
+        isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot"
+      );
       return;
     }
 
-    if (!isBotActive.value) return;
+    // Ignore bot active state only for OWNER
+    if (!isOwner && !isBotActive.value) return;
 
     // ADD/REMOVE TESTER
     if (isOwner && content.startsWith(`${PREFIX}addtester `)) {
@@ -52,13 +61,16 @@ export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isB
       await removeTarget(message, content.slice(PREFIX.length + 13).trim());
       return;
     }
-        // ADD/REMOVE VOICE TARGET
+    // ADD/REMOVE VOICE TARGET
     if (isOwner && content.startsWith(`${PREFIX}addvoicetarget `)) {
       await addVoiceTarget(message, content.slice(PREFIX.length + 15).trim());
       return;
     }
     if (isOwner && content.startsWith(`${PREFIX}removevoicetarget `)) {
-      await removeVoiceTarget(message, content.slice(PREFIX.length + 18).trim());
+      await removeVoiceTarget(
+        message,
+        content.slice(PREFIX.length + 18).trim()
+      );
       return;
     }
 
@@ -78,7 +90,9 @@ export async function handleMessageCreate(client, message, PREFIX, OWNER_ID, isB
     // TARGET MESSAGE
     if (isTarget && content) {
       try {
-        const supportChannel = await client.channels.fetch(process.env.SUPPORT_CHANNEL_ID);
+        const supportChannel = await client.channels.fetch(
+          process.env.SUPPORT_CHANNEL_ID
+        );
         if (supportChannel)
           await supportChannel.send(
             `📨 Message from <@${message.author.id}> (${message.author.tag}):\n> ${content}`
