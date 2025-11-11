@@ -4,11 +4,14 @@ import express from "express";
 import { Client, GatewayIntentBits } from "discord.js";
 import { initDB } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
-import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
+import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";;
+import { handlePresenceUpdate } from "./events/presenceUpdate.js";
+import { handleInteractionCreate } from "./events/interactionCreate.js";
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
@@ -18,16 +21,14 @@ const client = new Client({
 
 const PREFIX = process.env.DISCORD_PREFIX || "!";
 const OWNER_ID = process.env.OWNER_ID || "";
-const isBotActive = { value: false }; // mutable
+const isBotActive = { value: false };
 
 await initDB();
 
-// Event: Bot ready
 client.once("clientReady", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// Event: Message create
 client.on("messageCreate", async (message) => {
   await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
 });
@@ -40,7 +41,15 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   }
 });
 
-// Keep-alive server
+client.on("presenceUpdate", async (oldPresence, newPresence) => {
+  await handlePresenceUpdate(client, oldPresence, newPresence);
+});
+
+client.on("interactionCreate", async (interaction) => {
+  await handleInteractionCreate(interaction);
+});
+
+
 const app = express();
 app.get("/", (req, res) => res.send("✅ Discord bot running"));
 const PORT = process.env.PORT || 3000;
