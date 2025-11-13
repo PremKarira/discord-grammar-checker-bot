@@ -7,6 +7,7 @@ import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";;
 import { handlePresenceUpdate } from "./events/presenceUpdate.js";
 import { handleInteractionCreate } from "./events/interactionCreate.js";
+import { startN8nStatusMonitor } from "./utils/n8nStatus.js";
 
 const client = new Client({
   intents: [
@@ -27,6 +28,7 @@ await initDB();
 
 client.once("clientReady", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+  startN8nStatusMonitor(client);
 });
 
 client.on("messageCreate", async (message) => {
