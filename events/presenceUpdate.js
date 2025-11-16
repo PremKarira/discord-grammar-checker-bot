@@ -5,10 +5,15 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
     const user = newPresence.user;
     const channel = await client.channels.fetch("875427164076531743");
 
-    const oldActivity = oldPresence?.activities?.[0]?.details;
-    const newActivity = newPresence?.activities?.[0]?.details;
+    const oldCustom = oldPresence?.activities?.find(a => a.type === 4);
+    const newCustom = newPresence?.activities?.find(a => a.type === 4);
 
-    if (!newActivity || oldActivity === newActivity) return;
+    const oldText = oldCustom?.state || null;
+    const newText = newCustom?.state || null;
+
+    if (oldText === newText) return;
+
+    if (!newText) return;
 
     const deleteButton = new ButtonBuilder()
       .setCustomId("delete_message")
@@ -18,11 +23,10 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
     const row = new ActionRowBuilder().addComponents(deleteButton);
 
     await channel.send({
-      content: `🟣 **${user.tag}** updated custom status → \`${newActivity}\``,
+      content: `🟣 **${user.tag}** uupdated custom status → \`${newText}\``,
       components: [row],
     });
 
-    // console.log(`✅ Sent custom status update for ${user.tag}: ${newActivity}`);
   } catch (err) {
     console.error("Presence Handler Error:", err);
   }
