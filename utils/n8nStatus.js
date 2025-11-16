@@ -14,7 +14,7 @@ export async function startN8nStatusMonitor(client) {
     console.log({ status, message });
       const isOk = status === "ok";
       client.user.setPresence({
-        activities: [{ name: isOk ? `🟢 Currently serving` : `🔴 ${message || "Down"}`, type: 3 }],
+        activities: [{ name: isOk ? `🟢` : `🔴 ${message || "Down"}`, type: 3 }],
         status: isOk ? "online" : "dnd",
       });
 

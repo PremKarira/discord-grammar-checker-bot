@@ -3,6 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 export async function handlePresenceUpdate(client, oldPresence, newPresence) {
   try {
     const user = newPresence.user;
+    if (user.bot) return;
     const channel = await client.channels.fetch("875427164076531743");
 
     const oldCustom = oldPresence?.activities?.find(a => a.type === 4);
