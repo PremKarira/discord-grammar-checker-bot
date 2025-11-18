@@ -4,13 +4,14 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
   try {
     const user = newPresence.user;
     if (user.bot) return;
+
     const channel = await client.channels.fetch("875427164076531743");
 
-    const oldCustom = oldPresence?.activities?.find(a => a.type === 4);
-    const newCustom = newPresence?.activities?.find(a => a.type === 4);
+    const oldActivity = oldPresence?.activities?.find(a => a.state || a.details);
+    const newActivity = newPresence?.activities?.find(a => a.state || a.details);
 
-    const oldText = oldCustom?.state || null;
-    const newText = newCustom?.state || null;
+    const oldText = oldActivity?.details || oldActivity?.state || null;
+    const newText = newActivity?.details || newActivity?.state || null;
 
     if (oldText === newText) return;
 
@@ -24,7 +25,7 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
     const row = new ActionRowBuilder().addComponents(deleteButton);
 
     await channel.send({
-      content: `🟣 **${user.tag}** uupdated custom status → \`${newText}\``,
+      content: `🟣 **${user.tag}** updated custom status → \`${newText}\``,
       components: [row],
     });
 

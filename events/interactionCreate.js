@@ -10,10 +10,6 @@ export async function handleInteractionCreate(interaction) {
       });
     } catch (err) {
       console.error("Error deleting message:", err);
-      await interaction.reply({
-        content: "⚠️ Could not delete message.",
-        ephemeral: true,
-      });
     }
   }
 }
