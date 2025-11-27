@@ -76,20 +76,20 @@ export async function handleMessageCreate(
     }
 
     // TEST COMMAND
-    if ((isOwner || isTester) && content.startsWith(`${PREFIX}test `)) {
+    if (content.startsWith(`${PREFIX}test `)) {
       const textToCheck = content.slice(PREFIX.length + 5).trim();
       await testCommand(message, textToCheck);
       return;
     }
 
     // CHECK COMMAND
-    if ((isOwner || isTester) && content === `${PREFIX}check`) {
+    if (content === `${PREFIX}check`) {
       await checkCommand(message);
       return;
     }
 
     // SEARCH COMMAND
-    if ((isOwner || isTester) && content.startsWith(`${PREFIX}search `)) {
+    if (content.startsWith(`${PREFIX}search `)) {
       const textToSearch = content.slice(`${PREFIX}search `.length).trim();
       await searchCommand(message, [textToSearch]);
       return;
