@@ -11,14 +11,12 @@ export async function startN8nStatusMonitor(client) {
     try {
       const res = await fetch(statusUrl);
       const { status, message } = await res.json();
-    console.log({ status, message });
       const isOk = status === "ok";
       client.user.setPresence({
         activities: [{ name: isOk ? `🟢` : `🔴 ${message || "Down"}`, type: 3 }],
         status: isOk ? "online" : "dnd",
       });
 
-      console.log(`✅ ${status} - ${message}`);
     } catch (err) {
       client.user.setPresence({
         activities: [{ name: "⚠️ n8n Error", type: 3 }],

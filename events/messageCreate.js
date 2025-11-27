@@ -6,6 +6,7 @@ import { addTarget, removeTarget } from "../commands/updateTarget.js";
 import { addVoiceTarget, removeVoiceTarget } from "../commands/voiceTargets.js";
 import { testCommand } from "../commands/test.js";
 import { checkCommand } from "../commands/check.js";
+import { searchCommand } from "../commands/search.js";
 import { getUsers } from "../config/db.js";
 
 export async function handleMessageCreate(
@@ -84,6 +85,13 @@ export async function handleMessageCreate(
     // CHECK COMMAND
     if ((isOwner || isTester) && content === `${PREFIX}check`) {
       await checkCommand(message);
+      return;
+    }
+
+    // SEARCH COMMAND
+    if ((isOwner || isTester) && content.startsWith(`${PREFIX}search `)) {
+      const textToSearch = content.slice(`${PREFIX}search `.length).trim();
+      await searchCommand(message, [textToSearch]);
       return;
     }
 

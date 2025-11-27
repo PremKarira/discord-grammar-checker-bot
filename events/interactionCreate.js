@@ -20,7 +20,6 @@ for (const file of fs.readdirSync(commandsPath)) {
 }
 
 export async function handleInteractionCreate(interaction) {
-  // BUTTON HANDLING (your old code)
   if (interaction.isButton()) {
     if (interaction.customId === "delete_message") {
       try {
@@ -36,7 +35,6 @@ export async function handleInteractionCreate(interaction) {
     return;
   }
 
-  // SLASH COMMAND HANDLING
   if (!interaction.isChatInputCommand()) return;
 
   const command = commands[interaction.commandName];
@@ -46,9 +44,5 @@ export async function handleInteractionCreate(interaction) {
     await command.execute(interaction);
   } catch (err) {
     console.error("Slash Command Error:", err);
-    await interaction.reply({
-      content: "❌ Error executing command.",
-      ephemeral: true,
-    });
   }
 }

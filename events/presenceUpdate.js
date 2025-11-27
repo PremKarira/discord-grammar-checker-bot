@@ -5,6 +5,10 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
     const user = newPresence.user;
     if (user.bot) return;
 
+    // Check if the user is in a voice channel
+    const member = newPresence.member;
+    if (!member?.voice?.channel) return; // Exit if user is not in VC
+
     const channel = await client.channels.fetch("875427164076531743");
 
     const oldActivity = oldPresence?.activities?.find(a => a.state || a.details);
@@ -14,7 +18,6 @@ export async function handlePresenceUpdate(client, oldPresence, newPresence) {
     const newText = newActivity?.details || newActivity?.state || null;
 
     if (oldText === newText) return;
-
     if (!newText) return;
 
     const deleteButton = new ButtonBuilder()
