@@ -94,6 +94,20 @@ export async function handleMessageCreate(
       await searchCommand(message, [textToSearch]);
       return;
     }
+    // SUMMARY COMMAND
+    if (content.startsWith(`${PREFIX}summary `)) {
+      const number = parseInt(content.slice(`${PREFIX}summary `.length).trim());
+
+      if (isNaN(number) || number < 1 || number > 100) {
+        await message.reply("❌ Please give a valid number (1–100)");
+        return;
+      }
+
+      const { summaryCommand } = await import("../commands/summary.js");
+      await summaryCommand(message, number);
+      return;
+    }
+
 
     // TARGET MESSAGE
     if (isTarget && content) {
@@ -110,6 +124,7 @@ export async function handleMessageCreate(
       }
       await analyzeText(client, message, content, false);
     }
+
   } catch (err) {
     await reportError(client, err, "Message Handler");
   }

@@ -106,3 +106,4 @@ export async function searchText(client, message, text) {
     );
   }
 }
+export { splitMessage };
