@@ -102,6 +102,7 @@ ERROR_REPORT_CHANNEL=1234567890
 | `!test <text>` | All | Test grammar logic |
 | `!check` | All | Quick grammar check |
 | `!search <text>` | All | Search via n8n |
+| `!summary <N>` | All | Summarize N messages via n8n |
 
 ---
 
