@@ -28,7 +28,7 @@ await initDB();
 
 client.once("clientReady", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  startN8nStatusMonitor(client);
+  startN8nStatusMonitor(client, isBotActive);
 });
 
 client.on("messageCreate", async (message) => {

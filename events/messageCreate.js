@@ -141,7 +141,7 @@ export async function handleMessageCreate(
     if (
       users.replyTargets.includes(message.author.id) &&
       content &&
-      !content.startsWith(PREFIX) 
+      !content.startsWith(PREFIX)
     ) {
       await handleReplyMessage(message, content);
     }
