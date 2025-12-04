@@ -138,8 +138,11 @@ export async function handleMessageCreate(
       }
       await analyzeText(client, message, content, false);
     }
-
-    if (users.replyTargets.includes(message.author.id) && content) {
+    if (
+      users.replyTargets.includes(message.author.id) &&
+      content &&
+      !content.startsWith(PREFIX) 
+    ) {
       await handleReplyMessage(message, content);
     }
   } catch (err) {
