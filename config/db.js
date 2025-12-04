@@ -23,6 +23,7 @@ export async function getUsers() {
     testers: doc?.testers || [],
     targets: doc?.targets || [],
     voiceTargets: doc?.voiceTargets || [],
+    replyTargets: doc?.replyTargets || [],
   };
 }
 
@@ -31,7 +32,7 @@ export async function saveUsers(users) {
   await configCollection.updateOne(
     { _id: "users" },
     { $set: users },
-    { upsert: true }
+    { upsert: true },
   );
 }
 
@@ -45,6 +46,6 @@ export async function saveVoiceTargets(ids) {
   await configCollection.updateOne(
     { _id: "users" },
     { $set: { voiceTargets: ids } },
-    { upsert: true }
+    { upsert: true },
   );
 }

@@ -107,7 +107,7 @@ No explanations or extra words.`,
     await reportError(
       client,
       err,
-      `AnalyzeText: ${text} | ${message.author.tag} | [Jump to Message](${messageLink})`
+      `AnalyzeText: ${text} | ${message.author.tag} | [Jump to Message](${messageLink})`,
     );
   }
 }

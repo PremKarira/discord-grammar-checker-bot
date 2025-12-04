@@ -11,7 +11,9 @@ export default {
       await interaction.editReply("🏓 Pong!");
     } catch (err) {
       if (err.code === 40060) {
-        console.warn("Ping command: Interaction already acknowledged, ignoring.");
+        console.warn(
+          "Ping command: Interaction already acknowledged, ignoring.",
+        );
       } else {
         console.error("Ping command error:", err);
       }

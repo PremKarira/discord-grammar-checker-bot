@@ -4,7 +4,7 @@ import express from "express";
 import { Client, GatewayIntentBits } from "discord.js";
 import { initDB } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
-import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";;
+import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
 import { handlePresenceUpdate } from "./events/presenceUpdate.js";
 import { handleInteractionCreate } from "./events/interactionCreate.js";
 import { startN8nStatusMonitor } from "./utils/n8nStatus.js";
@@ -50,7 +50,6 @@ client.on("presenceUpdate", async (oldPresence, newPresence) => {
 client.on("interactionCreate", async (interaction) => {
   await handleInteractionCreate(interaction);
 });
-
 
 const app = express();
 app.get("/", (req, res) => res.send("✅ Discord bot running"));

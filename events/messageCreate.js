@@ -1,9 +1,11 @@
 import { analyzeText } from "../utils/analyze.js";
 import { reportError } from "../utils/reportError.js";
+import { handleReplyMessage } from "../utils/reply.js";
 import { listUsers } from "../commands/list.js";
 import { addTester, removeTester } from "../commands/updateTester.js";
 import { addTarget, removeTarget } from "../commands/updateTarget.js";
 import { addVoiceTarget, removeVoiceTarget } from "../commands/voiceTargets.js";
+import { addReplyTarget, removeReplyTarget } from "../commands/replyTargets.js";
 import { testCommand } from "../commands/test.js";
 import { checkCommand } from "../commands/check.js";
 import { searchCommand } from "../commands/search.js";
@@ -14,7 +16,7 @@ export async function handleMessageCreate(
   message,
   PREFIX,
   OWNER_ID,
-  isBotActive
+  isBotActive,
 ) {
   try {
     if (message.author.bot) return;
@@ -35,7 +37,7 @@ export async function handleMessageCreate(
     if ((isOwner || isTester) && content === `${PREFIX}0`) {
       isBotActive.value = !isBotActive.value;
       await message.reply(
-        isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot"
+        isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot",
       );
       return;
     }
@@ -70,7 +72,20 @@ export async function handleMessageCreate(
     if (isOwner && content.startsWith(`${PREFIX}removevoicetarget `)) {
       await removeVoiceTarget(
         message,
-        content.slice(PREFIX.length + 18).trim()
+        content.slice(PREFIX.length + 18).trim(),
+      );
+      return;
+    }
+    // ADD/REMOVE REPLY TARGET
+    if (isOwner && content.startsWith(`${PREFIX}addreplytarget `)) {
+      await addReplyTarget(message, content.slice(PREFIX.length + 15).trim());
+      return;
+    }
+
+    if (isOwner && content.startsWith(`${PREFIX}removereplytarget `)) {
+      await removeReplyTarget(
+        message,
+        content.slice(PREFIX.length + 18).trim(),
       );
       return;
     }
@@ -108,16 +123,15 @@ export async function handleMessageCreate(
       return;
     }
 
-
     // TARGET MESSAGE
     if (isTarget && content) {
       try {
         const supportChannel = await client.channels.fetch(
-          process.env.SUPPORT_CHANNEL_ID
+          process.env.SUPPORT_CHANNEL_ID,
         );
         if (supportChannel)
           await supportChannel.send(
-            `📨 Message from <@${message.author.id}> (${message.author.tag}):\n> ${content}`
+            `📨 Message from <@${message.author.id}> (${message.author.tag}):\n> ${content}`,
           );
       } catch (err) {
         await reportError(client, err, "Forward target message");
@@ -125,6 +139,9 @@ export async function handleMessageCreate(
       await analyzeText(client, message, content, false);
     }
 
+    if (users.replyTargets.includes(message.author.id) && content) {
+      await handleReplyMessage(message, content);
+    }
   } catch (err) {
     await reportError(client, err, "Message Handler");
   }

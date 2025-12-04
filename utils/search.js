@@ -37,7 +37,6 @@ function splitMessage(text, maxLength = 2000) {
   return chunks;
 }
 
-
 export async function searchText(client, message, text) {
   try {
     const searchingReaction = await message.react("⏳");
@@ -94,15 +93,16 @@ export async function searchText(client, message, text) {
       await message.reply(msg);
     }
 
-    try { await searchingReaction.remove(); } catch {}
-
+    try {
+      await searchingReaction.remove();
+    } catch {}
   } catch (err) {
     const guildId = message.guild?.id || "@me";
     const messageLink = `https://discord.com/channels/${guildId}/${message.channel.id}/${message.id}`;
     await reportError(
       client,
       err,
-      `SearchText: ${text} | ${message.author.tag} | [Jump to Message](${messageLink})`
+      `SearchText: ${text} | ${message.author.tag} | [Jump to Message](${messageLink})`,
     );
   }
 }

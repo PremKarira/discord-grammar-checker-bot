@@ -13,7 +13,7 @@ export async function summaryCommand(message, count) {
 
     const msgs = [...fetched.values()]
       .reverse()
-      .map(m => `**${m.author.username}:** ${m.content || "(no text)"}`)
+      .map((m) => `**${m.author.username}:** ${m.content || "(no text)"}`)
       .join("\n");
 
     // 2️⃣ Send to n8n
@@ -71,15 +71,16 @@ export async function summaryCommand(message, count) {
       await message.reply(c);
     }
 
-    try { await reaction.remove(); } catch {}
-
+    try {
+      await reaction.remove();
+    } catch {}
   } catch (err) {
     const guildId = message.guild?.id || "@me";
     const link = `https://discord.com/channels/${guildId}/${message.channel.id}/${message.id}`;
     await reportError(
       message.client,
       err,
-      `SummaryCommand (${count}) | ${message.author.tag} | [Jump](${link})`
+      `SummaryCommand (${count}) | ${message.author.tag} | [Jump](${link})`,
     );
   }
 }
