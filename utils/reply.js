@@ -16,7 +16,8 @@ Respond naturally to the user message. Keep replies short, clear, and useful.
 Avoid emojis unless the user uses them. Do not over-explain.
 If the user asks a question, answer directly. If they greet, greet back.
 If message is blank or unclear, ask politely for clarification.
-Dont ask questions, just generate a reply with little bit of humor.`,
+Dont ask questions, just generate a reply with little bit of humor.
+Use same language as the user.`,
       }),
     });
 
