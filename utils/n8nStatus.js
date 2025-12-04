@@ -1,7 +1,8 @@
 import fetch from "node-fetch";
 
 export function startN8nStatusMonitor(client, isBotActive) {
-  const url = process.env.N8N_STATUS_URL;
+  const baseUrl = process.env.N8N_WEBHOOK_URL;
+  const url = baseUrl.replace(/\/[^/]+$/, "/status");
 
   if (!url) {
     console.error("❌ N8N_STATUS_URL missing");

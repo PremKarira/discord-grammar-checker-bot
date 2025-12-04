@@ -18,8 +18,8 @@ export async function listUsers(message, users) {
 
   await message.reply(
     `📝 **Current Users:**\n\n` +
-      `🎯 **Targets:** ${targetNames.join(", ") || "None"}\n` +
       `🧪 **Testers:** ${testerNames.join(", ") || "None"}\n` +
+      `🎯 **Grammar Targets:** ${targetNames.join(", ") || "None"}\n` +
       `🎙️ **Voice Targets:** ${voiceTargetNames.join(", ") || "None"}\n` +
       `🎙️ **Reply Targets:** ${replyTargetNames.join(", ") || "None"}`,
   );
