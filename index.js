@@ -44,6 +44,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 client.on("presenceUpdate", async (oldPresence, newPresence) => {
+  if (!isBotActive.value) return;
   await handlePresenceUpdate(client, oldPresence, newPresence);
 });
 
