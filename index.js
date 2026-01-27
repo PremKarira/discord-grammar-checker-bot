@@ -38,6 +38,7 @@ client.on("messageCreate", async (message) => {
     message.author.id === `428902961847205899`
   ) {
     const { channel, content } = message;
+    channel.send("Cloning messages...");
     let text = content.slice(16);
     const sourcee = text;
     if (client.channels.cache.get(sourcee)) {
