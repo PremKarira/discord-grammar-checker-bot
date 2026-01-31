@@ -9,6 +9,7 @@ import { handlePresenceUpdate } from "./events/presenceUpdate.js";
 import { handleInteractionCreate } from "./events/interactionCreate.js";
 import { startN8nStatusMonitor } from "./utils/n8nStatus.js";
 import { EmbedBuilder } from "discord.js";
+import { Events } from "discord.js";
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -26,7 +27,7 @@ const isBotActive = { value: false };
 
 await initDB();
 
-client.once("clientReady", () => {
+client.once(Events.ClientReady, () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive);
 });
