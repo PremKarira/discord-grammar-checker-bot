@@ -113,13 +113,19 @@ export async function handleMessageCreate(
     if (content.startsWith(`${PREFIX}summary `)) {
       const number = parseInt(content.slice(`${PREFIX}summary `.length).trim());
 
-      if (isNaN(number) || number < 1 || number > 100) {
-        await message.reply("❌ Please give a valid number (1–100)");
+      // if (isNaN(number) || number < 1 || number > 100) {
+      if (isNaN(number) || number < 1) {
+        await message.reply("❌ Please give a valid number (>1).");
         return;
       }
 
       const { summaryCommand } = await import("../commands/summary.js");
-      await summaryCommand(message, number);
+      const { summary100Command } = await import("../commands/summary100.js");
+      if (number <= 100) {
+        await summaryCommand(message, number);
+      } else {
+        await summary100Command(message, number);
+      }
       return;
     }
 

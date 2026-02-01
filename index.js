@@ -32,13 +32,12 @@ client.once(Events.ClientReady, () => {
   startN8nStatusMonitor(client, isBotActive);
 });
 
-client.on("debug", (d) => console.log("[DEBUG]", d));
-client.on("warn", console.warn);
-client.on("error", console.error);
+// client.on("debug", (d) => console.log("[DEBUG]", d));
+// client.on("warn", console.warn);
+// client.on("error", console.error);
 
 client.on("messageCreate", async (message) => {
   await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
-
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
