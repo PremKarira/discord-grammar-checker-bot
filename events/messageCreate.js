@@ -8,6 +8,8 @@ import { addVoiceTarget, removeVoiceTarget } from "../commands/voiceTargets.js";
 import { addReplyTarget, removeReplyTarget } from "../commands/replyTargets.js";
 import { testCommand } from "../commands/test.js";
 import { checkCommand } from "../commands/check.js";
+import { snipeCommand } from "../commands/snipe.js";
+import { editSnipeCommand } from "../commands/editSnipe.js";
 import { searchCommand } from "../commands/search.js";
 import { getUsers } from "../config/db.js";
 
@@ -100,6 +102,18 @@ export async function handleMessageCreate(
     // CHECK COMMAND
     if (content === `${PREFIX}check`) {
       await checkCommand(message);
+      return;
+    }
+
+    // SNIPE COMMAND
+    if (content.startsWith(`${PREFIX}snipe`)) {
+      const args = content.split(/\s+/).slice(1);
+      await snipeCommand(message, args);
+      return;
+    }
+
+    if (content === `${PREFIX}editsnipe`) {
+      await editSnipeCommand(message);
       return;
     }
 
