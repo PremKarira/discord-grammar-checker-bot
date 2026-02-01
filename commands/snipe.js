@@ -15,6 +15,29 @@ export async function snipeCommand(message, args = []) {
     return;
   }
 
+  // !snipe all
+if (args[0] === "all") {
+  let msg = `🎯 **All Sniped Messages (${list.length})**\n\n`;
+  list.forEach((snipe, i) => {
+    msg += `**#${i + 1}** 👤 <@${snipe.authorId}> 🕒 <t:${Math.floor(snipe.createdAt / 1000)}:R>\n${snipe.content}\n`;
+    if (snipe.attachments.length) {
+      msg += "📎 **Attachments:**\n" + snipe.attachments.join("\n") + "\n";
+    }
+    msg += "\n";
+  });
+
+  // Deduplicate user IDs for allowedMentions
+  const uniqueUsers = [...new Set(list.map(s => s.authorId))];
+
+  await message.channel.send({
+    content: msg,
+    allowedMentions: { users: uniqueUsers, roles: [], everyone: false },
+  });
+  return;
+}
+
+
+
   // !snipe last 5
   const index = args[0] ? parseInt(args[0], 10) - 1 : 0;
   const snipe = list[index];
