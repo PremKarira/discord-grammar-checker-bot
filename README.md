@@ -103,6 +103,8 @@ ERROR_REPORT_CHANNEL=1234567890
 | `!check` | All | Quick grammar check |
 | `!search <text>` | All | Search via n8n |
 | `!summary <N>` | All | Summarize N messages via n8n |
+| `!snipe [N/all/clear]` | All | Show the last N deleted messages or all snipes in the channel |
+| `!editsnipe` | All | Show the last N edited messages or all edited messages in the channel |
 
 ---
 
