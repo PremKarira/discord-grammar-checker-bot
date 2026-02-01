@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, Partials  } from "discord.js";
 import { initDB } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
@@ -10,6 +10,8 @@ import { handleInteractionCreate } from "./events/interactionCreate.js";
 import { startN8nStatusMonitor } from "./utils/n8nStatus.js";
 import { EmbedBuilder } from "discord.js";
 import { Events } from "discord.js";
+import { handleMessageDelete } from "./events/messageDelete.js";
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -19,6 +21,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildVoiceStates,
   ],
+  partials: [Partials.Message, Partials.Channel],
 });
 
 const PREFIX = process.env.DISCORD_PREFIX || "!";
@@ -38,6 +41,10 @@ client.once(Events.ClientReady, () => {
 
 client.on("messageCreate", async (message) => {
   await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
+});
+
+client.on("messageDelete", async (message) => {
+  await handleMessageDelete(message);
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
