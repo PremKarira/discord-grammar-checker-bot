@@ -12,6 +12,7 @@ import { EmbedBuilder } from "discord.js";
 import { Events } from "discord.js";
 import { handleMessageDelete } from "./events/messageDelete.js";
 import { handleMessageUpdate } from "./events/messageUpdate.js";
+import { forwardMessage } from "./utils/forwardmessage.js";
 
 const client = new Client({
   intents: [
@@ -42,6 +43,7 @@ client.once(Events.ClientReady, () => {
 
 client.on("messageCreate", async (message) => {
   await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
+  await forwardMessage(client, message);
 });
 
 client.on("messageDelete", async (message) => {
