@@ -1,4 +1,20 @@
+let forwardingEnabled = true;
+
 export async function forwardMessage(client, message) {
+  if (message.author.id === process.env.OWNER_ID) {
+    if (message.content === "!fon") {
+      forwardingEnabled = true;
+      return message.reply("✅ Message forwarding ENABLED");
+    }
+
+    if (message.content === "!foff") {
+      forwardingEnabled = false;
+      return message.reply("❌ Message forwarding DISABLED");
+    }
+  }
+
+  if (!forwardingEnabled) return;
+
   if (message.author.bot) return;
 
   if (!message.guild) return;

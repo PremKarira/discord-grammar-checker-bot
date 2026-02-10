@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { Client, GatewayIntentBits, Partials, PermissionsBitField  } from "discord.js";
 import { initDB } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
