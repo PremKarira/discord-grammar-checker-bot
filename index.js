@@ -55,6 +55,7 @@ client.on("messageUpdate", async (message) => {
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
+  if (!isBotActive.value) return;
   try {
     await handleVoiceStateUpdate(oldState, newState);
   } catch (err) {

@@ -30,7 +30,7 @@ export async function handleMessageCreate(
     const content = message.content.trim();
 
     // LIST
-    if ((isOwner || isTester) && content === `${PREFIX}list`) {
+    if ((isOwner) && content === `${PREFIX}list`) {
       await listUsers(message, users);
       return;
     }
