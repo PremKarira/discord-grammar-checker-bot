@@ -13,6 +13,8 @@ import { Events } from "discord.js";
 import { handleMessageDelete } from "./events/messageDelete.js";
 import { handleMessageUpdate } from "./events/messageUpdate.js";
 import { forwardMessage } from "./utils/forwardmessage.js";
+import { joinVoiceChannel } from "@discordjs/voice";
+
 
 const client = new Client({
   intents: [
@@ -35,6 +37,19 @@ await initDB();
 client.once(Events.ClientReady, () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive);
+  // Replace with your server ID and voice channel ID
+  const guild = client.guilds.cache.get("875427163598368779");
+  const channel = guild.channels.cache.get("1472971349441122347");
+
+  if (channel && channel.isVoiceBased()) {
+    joinVoiceChannel({
+      channelId: channel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+    });
+
+    console.log("🎙 Joined Voice Channel");
+  }
 });
 
 // client.on("debug", (d) => console.log("[DEBUG]", d));
