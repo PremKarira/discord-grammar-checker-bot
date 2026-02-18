@@ -12,6 +12,7 @@ import { snipeCommand } from "../commands/snipe.js";
 import { editSnipeCommand } from "../commands/editSnipe.js";
 import { searchCommand } from "../commands/search.js";
 import { getUsers } from "../config/db.js";
+import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
 
 export async function handleMessageCreate(
   client,
@@ -30,7 +31,7 @@ export async function handleMessageCreate(
     const content = message.content.trim();
 
     // LIST
-    if ((isOwner) && content === `${PREFIX}list`) {
+    if (isOwner && content === `${PREFIX}list`) {
       await listUsers(message, users);
       return;
     }
@@ -41,6 +42,18 @@ export async function handleMessageCreate(
       await message.reply(
         isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot",
       );
+      return;
+    }
+
+    // JOIN VC
+    if (isOwner && content === `${PREFIX}joinvc`) {
+      await joinVCCommand(client, message);
+      return;
+    }
+
+    // LEAVE VC
+    if (isOwner && content === `${PREFIX}leavevc`) {
+      await leaveVCCommand(message);
       return;
     }
 
