@@ -1,14 +1,21 @@
 let forwardingEnabled = true;
 
+import {
+  getForwardingStatus,
+  saveForwardingStatus,
+} from "../config/db.js";
+
+
 export async function forwardMessage(client, message) {
+  let forwardingEnabled = await getForwardingStatus();
   if (message.author.id === process.env.OWNER_ID) {
     if (message.content === "!fon") {
-      forwardingEnabled = true;
+      await saveForwardingStatus(true);
       return message.reply("✅ Message forwarding ENABLED");
     }
 
     if (message.content === "!foff") {
-      forwardingEnabled = false;
+      await saveForwardingStatus(false);
       return message.reply("❌ Message forwarding DISABLED");
     }
   }

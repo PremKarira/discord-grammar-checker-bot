@@ -49,3 +49,20 @@ export async function saveVoiceTargets(ids) {
     { upsert: true },
   );
 }
+
+// ================= FORWARDING CONFIG =================
+
+// Get forwarding status
+export async function getForwardingStatus() {
+  const doc = await configCollection.findOne({ _id: "forwarding" });
+  return doc?.enabled ?? true; // default true
+}
+
+// Save forwarding status
+export async function saveForwardingStatus(status) {
+  await configCollection.updateOne(
+    { _id: "forwarding" },
+    { $set: { enabled: status } },
+    { upsert: true }
+  );
+}
