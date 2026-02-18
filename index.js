@@ -92,9 +92,10 @@ client.on("messageUpdate", async (message) => {
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
+  
   if (!isBotActive.value) return;
   try {
-    await handleVoiceStateUpdate(oldState, newState);
+    await handleVoiceStateUpdate(oldState, newState,isBotActive);
   } catch (err) {
     console.error("Voice State Handler Error:", err);
   }
