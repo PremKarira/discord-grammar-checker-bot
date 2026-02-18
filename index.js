@@ -8,6 +8,7 @@ import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
 import { handlePresenceUpdate } from "./events/presenceUpdate.js";
 import { handleInteractionCreate } from "./events/interactionCreate.js";
 import { startN8nStatusMonitor } from "./utils/n8nStatus.js";
+import { setupVoiceOnReady } from "./utils/overwatchVC.js";
 import { EmbedBuilder } from "discord.js";
 import { Events } from "discord.js";
 import { handleMessageDelete } from "./events/messageDelete.js";
@@ -27,6 +28,28 @@ const client = new Client({
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
+const client2 = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+});
+const client3 = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+});
 
 const PREFIX = process.env.DISCORD_PREFIX || "!";
 const OWNER_ID = process.env.OWNER_ID || "";
@@ -34,23 +57,22 @@ const isBotActive = { value: false };
 
 await initDB();
 
-client.once(Events.ClientReady, () => {
+client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive);
-  // Replace with your server ID and voice channel ID
-  const guild = client.guilds.cache.get("875427163598368779");
-  const channel = guild.channels.cache.get("1472971349441122347");
-
-  if (channel && channel.isVoiceBased()) {
-    joinVoiceChannel({
-      channelId: channel.id,
-      guildId: guild.id,
-      adapterCreator: guild.voiceAdapterCreator,
-    });
-
-    console.log("🎙 Joined Voice Channel");
-  }
+  await setupVoiceOnReady(client, "Client 1");
 });
+
+client2.once(Events.ClientReady, async () => {
+  console.log(`✅ Logged in as ${client2.user.tag}`);
+  await setupVoiceOnReady(client2, "Client 2");
+});
+
+client3.once(Events.ClientReady, async () => {
+  console.log(`✅ Logged in as ${client3.user.tag}`);
+  await setupVoiceOnReady(client3, "Client 3");
+});
+
 
 // client.on("debug", (d) => console.log("[DEBUG]", d));
 // client.on("warn", console.warn);
@@ -93,3 +115,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
 client.login(process.env.DISCORD_TOKEN);
+client2.login(process.env.DISCORD_TOKEN2);
+client3.login(process.env.DISCORD_TOKEN3);
