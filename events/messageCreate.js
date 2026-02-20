@@ -156,6 +156,26 @@ export async function handleMessageCreate(
       return;
     }
 
+    // WAKEUP COMMAND
+    if (isOwner && content.startsWith(`${PREFIX}wakeup `)) {
+      const args = message.mentions.members.first();
+      const number = parseInt(content.split(/\s+/)[2]);
+
+      if (!args) {
+        await message.reply("❌ Mention a user.");
+        return;
+      }
+
+      if (isNaN(number) || number < 1) {
+        await message.reply("❌ Provide valid number (>0). For now default is 5.");
+        number = 5;
+      }
+
+      const { wakeupCommand } = await import("../commands/wakeup.js");
+      await wakeupCommand(message, args, number);
+      return;
+    }
+
     // TARGET MESSAGE
     if (isTarget && content) {
       try {
