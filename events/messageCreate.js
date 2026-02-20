@@ -157,7 +157,7 @@ export async function handleMessageCreate(
     }
 
     // WAKEUP COMMAND
-    if (isOwner && content.startsWith(`${PREFIX}wakeup `)) {
+    if (isTester && content.startsWith(`${PREFIX}wakeup `)) {
       const args = message.mentions.members.first();
       const number = parseInt(content.split(/\s+/)[2]);
 
@@ -169,6 +169,11 @@ export async function handleMessageCreate(
       if (isNaN(number) || number < 1) {
         await message.reply("❌ Provide valid number (>0). For now default is 5.");
         number = 5;
+      }
+
+      if(number>10){
+        await message.reply("⚠️ That's a big number! Setting to 10 to prevent issues.");
+        number = 10;
       }
 
       const { wakeupCommand } = await import("../commands/wakeup.js");

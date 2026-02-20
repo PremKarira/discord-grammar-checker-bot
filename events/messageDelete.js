@@ -1,6 +1,6 @@
 import { snipes } from "../utils/snipeStore.js";
 
-export async function handleMessageDelete(message) {
+export async function handleMessageDelete(message, OWNER_ID) {
   if (!message?.content && message.attachments.size === 0) return;
   if (message.author?.bot) return;
 
@@ -32,6 +32,7 @@ export async function handleMessageDelete(message) {
     if (!hasMention) return;
 
     const authorId = message.author.id;
+    if(authorId === OWNER_ID) return; // Ignore self-deletes
 
     const content = message.content;
 

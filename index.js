@@ -87,7 +87,7 @@ client.on("messageCreate", async (message) => {
 });
 
 client.on("messageDelete", async (message) => {
-  await handleMessageDelete(message);
+  await handleMessageDelete(message,OWNER_ID);
 });
 
 client.on("messageUpdate", async (message) => {
