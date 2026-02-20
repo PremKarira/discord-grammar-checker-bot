@@ -39,7 +39,7 @@ export function startN8nStatusMonitor(client, isBotActive) {
       status: isBotActive.value ? "online" : "idle",
     });
 
-    console.log("Updated Bot Status:", statusText);
+    // console.log("Updated Bot Status:", statusText);
   }
 
   updateStatus(); 
