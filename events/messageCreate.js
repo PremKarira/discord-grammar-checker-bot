@@ -159,7 +159,7 @@ export async function handleMessageCreate(
     // WAKEUP COMMAND
     if (isTester && content.startsWith(`${PREFIX}wakeup `)) {
       const args = message.mentions.members.first();
-      const number = parseInt(content.split(/\s+/)[2]);
+      let number = parseInt(content.split(/\s+/)[2]);
 
       if (!args) {
         await message.reply("❌ Mention a user.");
