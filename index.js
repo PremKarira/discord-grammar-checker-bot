@@ -64,7 +64,7 @@ await initDB();
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive);
-  await setupVoiceOnReady(client, "Client 1");
+  // await setupVoiceOnReady(client, "Client 1");
 });
 
 // client2.once(Events.ClientReady, async () => {
