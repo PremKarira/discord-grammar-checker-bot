@@ -13,7 +13,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
     const member = newState.member;
 
-      console.log(newState.selfMute && newState.selfDeaf);
+      // console.log(newState.selfMute && newState.selfDeaf);
       // ===============================
       // ✅ AUTO MOVE TO AFK IF MUTED+DEAF 1 MIN
       // ===============================
