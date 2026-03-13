@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 
-export async function listUsers(message, users) {
+export async function listUsers(message, users, botStatus) {
   const guild = message.guild;
   if (!guild) return message.reply("⚠️ Could not fetch guild members.");
 
@@ -15,7 +15,7 @@ export async function listUsers(message, users) {
         const silentMention = `<@${id}>`;
 
         return `• ${silentMention} **${name}**\n  \`ID: ${id}\``;
-      })
+      }),
     );
 
     return lines.join("\n");
@@ -23,9 +23,16 @@ export async function listUsers(message, users) {
 
   const embed = new EmbedBuilder()
     .setTitle("📋 User Configuration Overview")
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .setThumbnail(guild.iconURL({ dynamic: true }))
     .addFields(
+      {
+        name: "⚙️ Bot Status",
+        value: `**Text Commands:** ${botStatus.commandEnabled ? "🟢 ON" : "🔴 OFF"}
+**Voice State Updates:** ${botStatus.voiceStateUpdate ? "🟢 ON" : "🔴 OFF"}
+**Message Forwarding:** ${botStatus.forwardingEnabled ? "🟢 ON" : "🔴 OFF"}`,
+        inline: false,
+      },
       {
         name: "🧪 Testers",
         value: await formatUsers(users.testers),
@@ -45,12 +52,15 @@ export async function listUsers(message, users) {
         name: "💬 Reply Targets",
         value: await formatUsers(users.replyTargets),
         inline: false,
-      }
+      },
     )
     .setFooter({
       text: "Mentions are displayed without notifying users",
     })
     .setTimestamp();
 
-  await message.reply({ embeds: [embed] , allowedMentions: { repliedUser: false }});
+  await message.reply({
+    embeds: [embed],
+    allowedMentions: { repliedUser: false },
+  });
 }

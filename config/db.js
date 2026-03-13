@@ -63,6 +63,26 @@ export async function saveForwardingStatus(status) {
   await configCollection.updateOne(
     { _id: "forwarding" },
     { $set: { enabled: status } },
-    { upsert: true }
+    { upsert: true },
+  );
+}
+
+// ================= BOT STATUS =================
+
+export async function getBotStatus() {
+  const doc = await configCollection.findOne({ _id: "botStatus" });
+
+  return {
+    commandEnabled: doc?.commandEnabled ?? false,
+    voiceStateUpdate: doc?.voiceStateUpdate ?? false,
+    forwardingEnabled: doc?.forwardingEnabled ?? true,
+  };
+}
+
+export async function saveBotStatus(status) {
+  await configCollection.updateOne(
+    { _id: "botStatus" },
+    { $set: status },
+    { upsert: true },
   );
 }

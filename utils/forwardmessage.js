@@ -1,34 +1,28 @@
-let forwardingEnabled = true;
+import { saveBotStatus } from "../config/db.js";
 
-import {
-  getForwardingStatus,
-  saveForwardingStatus,
-} from "../config/db.js";
-
-
-export async function forwardMessage(client, message) {
-  let forwardingEnabled = await getForwardingStatus();
+export async function forwardMessage(client, message, PREFIX, botStatus) {
   if (message.author.id === process.env.OWNER_ID) {
-    if (message.content === "!fon") {
-      await saveForwardingStatus(true);
-      return message.reply("✅ Message forwarding ENABLED");
-    }
+    if (message.content === `${PREFIX}f0`) {
+      botStatus.forwardingEnabled = !botStatus.forwardingEnabled;
 
-    if (message.content === "!foff") {
-      await saveForwardingStatus(false);
-      return message.reply("❌ Message forwarding DISABLED");
+      await saveBotStatus(botStatus);
+
+      return message.reply(
+        botStatus.forwardingEnabled
+          ? "✅ Message forwarding ENABLED"
+          : "❌ Message forwarding DISABLED",
+      );
     }
   }
 
-  if (!forwardingEnabled) return;
+  if (!botStatus.forwardingEnabled) return;
 
   if (message.author.bot) return;
-
   if (!message.guild) return;
 
   try {
     const supportChannel = await client.channels.fetch(
-      process.env.SUPPORT_CHANNEL_ID
+      process.env.SUPPORT_CHANNEL_ID,
     );
 
     if (!supportChannel) return;
@@ -45,9 +39,8 @@ export async function forwardMessage(client, message) {
 💬 **Message:**
 \`\`\`
 ${content}
-\`\`\``
+\`\`\``,
     });
-
   } catch (error) {
     console.error("❌ Failed to forward message:", error);
   }

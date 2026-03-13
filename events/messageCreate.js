@@ -11,7 +11,7 @@ import { checkCommand } from "../commands/check.js";
 import { snipeCommand } from "../commands/snipe.js";
 import { editSnipeCommand } from "../commands/editSnipe.js";
 import { searchCommand } from "../commands/search.js";
-import { getUsers } from "../config/db.js";
+import { getUsers, saveBotStatus } from "../config/db.js";
 import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
 
 export async function handleMessageCreate(
@@ -20,6 +20,7 @@ export async function handleMessageCreate(
   PREFIX,
   OWNER_ID,
   isBotActive,
+  botStatus,
 ) {
   try {
     if (message.author.bot) return;
@@ -32,7 +33,7 @@ export async function handleMessageCreate(
 
     // LIST
     if (isOwner && content === `${PREFIX}list`) {
-      await listUsers(message, users);
+      await listUsers(message, users, botStatus);
       return;
     }
 
@@ -42,6 +43,41 @@ export async function handleMessageCreate(
       await message.reply(
         isBotActive.value ? "🟢 Bot is now ACTIVE" : "🔴 Switching off bot",
       );
+      return;
+    }
+    // TEXT TOGGLE
+    if ((isOwner || isTester) && content === `${PREFIX}text0`) {
+      botStatus.commandEnabled = !botStatus.commandEnabled;
+
+      await saveBotStatus({
+        commandEnabled: botStatus.commandEnabled,
+        voiceStateUpdate: botStatus.voiceStateUpdate,
+      });
+
+      await message.reply(
+        botStatus.commandEnabled
+          ? "🟢 Command features ENABLED"
+          : "🔴 Command features DISABLED",
+      );
+
+      return;
+    }
+
+    // VC TOGGLE
+    if ((isOwner || isTester) && content === `${PREFIX}vc0`) {
+      botStatus.voiceStateUpdate = !botStatus.voiceStateUpdate;
+
+      await saveBotStatus({
+        commandEnabled: botStatus.commandEnabled,
+        voiceStateUpdate: botStatus.voiceStateUpdate,
+      });
+
+      await message.reply(
+        botStatus.voiceStateUpdate
+          ? "🟢 Voice State Update ENABLED"
+          : "🔴 Voice State Update DISABLED",
+      );
+
       return;
     }
 
@@ -58,7 +94,7 @@ export async function handleMessageCreate(
     }
 
     // Ignore bot active state only for OWNER
-    if (!isOwner && !isBotActive.value) return;
+    if (!isOwner && !botStatus.commandEnabled) return;
 
     // ADD/REMOVE TESTER
     if (isOwner && content.startsWith(`${PREFIX}addtester `)) {
@@ -167,12 +203,16 @@ export async function handleMessageCreate(
       }
 
       if (isNaN(number) || number < 1) {
-        await message.reply("❌ Provide valid number (>0). For now default is 5.");
+        await message.reply(
+          "❌ Provide valid number (>0). For now default is 5.",
+        );
         number = 5;
       }
 
-      if(number>10){
-        await message.reply("⚠️ That's a big number! Setting to 10 to prevent issues.");
+      if (number > 10) {
+        await message.reply(
+          "⚠️ That's a big number! Setting to 10 to prevent issues.",
+        );
         number = 10;
       }
 

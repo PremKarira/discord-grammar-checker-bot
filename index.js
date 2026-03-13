@@ -7,7 +7,7 @@ import {
   Partials,
   PermissionsBitField,
 } from "discord.js";
-import { initDB } from "./config/db.js";
+import { initDB, getBotStatus } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";
 import { handlePresenceUpdate } from "./events/presenceUpdate.js";
@@ -61,6 +61,18 @@ const isBotActive = { value: false };
 
 await initDB();
 
+const botStatus = {
+  commandEnabled: false,
+  voiceStateUpdate: false,
+  forwardingEnabled: true,
+};
+
+const savedStatus = await getBotStatus();
+
+botStatus.commandEnabled = savedStatus.commandEnabled;
+botStatus.voiceStateUpdate = savedStatus.voiceStateUpdate;
+botStatus.forwardingEnabled = savedStatus.forwardingEnabled;
+
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive);
@@ -82,12 +94,19 @@ client.once(Events.ClientReady, async () => {
 // client.on("error", console.error);
 
 client.on("messageCreate", async (message) => {
-  await handleMessageCreate(client, message, PREFIX, OWNER_ID, isBotActive);
-  await forwardMessage(client, message);
+  await handleMessageCreate(
+    client,
+    message,
+    PREFIX,
+    OWNER_ID,
+    isBotActive,
+    botStatus,
+  );
+  await forwardMessage(client, message, PREFIX, botStatus);
 });
 
 client.on("messageDelete", async (message) => {
-  await handleMessageDelete(message,OWNER_ID);
+  await handleMessageDelete(message, OWNER_ID);
 });
 
 client.on("messageUpdate", async (message) => {
@@ -104,7 +123,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 client.on("presenceUpdate", async (oldPresence, newPresence) => {
-  if (!isBotActive.value) return;
+  if (!botStatus.voiceStateUpdate) return;
   await handlePresenceUpdate(client, oldPresence, newPresence);
 });
 
