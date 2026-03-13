@@ -1,8 +1,8 @@
 import fetch from "node-fetch";
 
-export function startN8nStatusMonitor(client, isBotActive) {
+export function startN8nStatusMonitor(client, isBotActive, botStatus) {
   const baseUrl = process.env.N8N_WEBHOOK_URL;
-  const url = baseUrl.replace(/\/[^/]+$/, "/status");
+  const url = baseUrl?.replace(/\/[^/]+$/, "/status");
 
   if (!url) {
     console.error("❌ N8N_STATUS_URL missing");
@@ -18,30 +18,40 @@ export function startN8nStatusMonitor(client, isBotActive) {
 
       if (data.status === "ok") n8nState = "OK";
       else n8nState = "DOWN";
-
-    } catch (err) {
+    } catch {
       n8nState = "ERROR";
     }
 
-    // Bot Active Status
-    const botState = isBotActive.value ? "🟢 Active" : "🔴 Off";
+    // 1️⃣ Bot active
+    const botState = isBotActive.value ? "🟢 BOT ON" : "🔴 BOT OFF";
 
-    // Final status line
-    const statusText = `${botState} | ${
-      n8nState === "OK" ? "🟢 N8N OK" :
-      n8nState === "DOWN" ? "🔴 N8N DOWN" :
-      "🔴 N8N ERROR"
-    }`;
+    // 2️⃣ Commands
+    const commandState = botStatus.commandEnabled ? "⚡ CMD ON" : "⚡ CMD OFF";
 
-    // Presence update
+    // 3️⃣ Forwarding
+    const forwardState = botStatus.forwardingEnabled
+      ? "📨 FWD ON"
+      : "📭 FWD OFF";
+
+    // 4️⃣ Voice
+    const voiceState = botStatus.voiceStateUpdate ? "🔊 VC ON" : "🔇 VC OFF";
+
+    // N8N status
+    const n8nStatus =
+      n8nState === "OK"
+        ? "🟢 N8N OK"
+        : n8nState === "DOWN"
+          ? "🔴 N8N DOWN"
+          : "🔴 N8N ERR";
+
+    const statusText = `${commandState} | ${voiceState} | ${n8nStatus}`;
+
     client.user.setPresence({
       activities: [{ name: statusText }],
       status: isBotActive.value ? "online" : "idle",
     });
-
-    // console.log("Updated Bot Status:", statusText);
   }
 
-  updateStatus(); 
-  setInterval(updateStatus, 30_000); // run every 30 sec
+  updateStatus();
+  setInterval(updateStatus, 30000);
 }
