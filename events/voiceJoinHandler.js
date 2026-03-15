@@ -13,47 +13,43 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
     const member = newState.member;
 
-      // console.log(newState.selfMute && newState.selfDeaf);
-      // ===============================
-      // ✅ AUTO MOVE TO AFK IF MUTED+DEAF 1 MIN
-      // ===============================
-      if (newState.selfMute && newState.selfDeaf) {
+    // console.log(newState.selfMute && newState.selfDeaf);
+    // ===============================
+    // ✅ AUTO MOVE TO AFK IF MUTED+DEAF 1 MIN
+    // ===============================
+    if (newState.channelId === AFK_CHANNEL_ID) return;
+    if (newState.selfMute && newState.selfDeaf) {
+      if (!muteTimers.has(member.id)) {
+        const timer = setTimeout(async () => {
+          try {
+            const updatedState = member.voice;
 
-  if (!muteTimers.has(member.id)) {
-    const timer = setTimeout(async () => {
-      try {
-        const updatedState = member.voice;
+            if (updatedState.selfMute && updatedState.selfDeaf) {
+              const AFK_CHANNEL_ID = "1444000409483087903";
+              const afkChannel =
+                member.guild.channels.cache.get(AFK_CHANNEL_ID);
 
-        if (updatedState.selfMute && updatedState.selfDeaf) {
-
-          const AFK_CHANNEL_ID = "1444000409483087903";
-          const afkChannel = member.guild.channels.cache.get(AFK_CHANNEL_ID);
-
-          if (afkChannel && member.voice.channelId !== AFK_CHANNEL_ID) {
-            await member.voice.setChannel(afkChannel);
-            console.log(`Moved ${member.user.tag} to AFK`);
+              if (afkChannel && member.voice.channelId !== AFK_CHANNEL_ID) {
+                await member.voice.setChannel(afkChannel);
+                console.log(`Moved ${member.user.tag} to AFK`);
+              }
+            }
+          } catch (err) {
+            console.error("AFK move error:", err);
+          } finally {
+            muteTimers.delete(member.id);
           }
-        }
+        }, 60 * 1000);
 
-      } catch (err) {
-        console.error("AFK move error:", err);
-      } finally {
+        muteTimers.set(member.id, timer);
+      }
+    } else {
+      // Cancel timer if they undeafen/unmute
+      if (muteTimers.has(member.id)) {
+        clearTimeout(muteTimers.get(member.id));
         muteTimers.delete(member.id);
       }
-    }, 60 * 1000);
-
-    muteTimers.set(member.id, timer);
-  }
-
-} else {
-  // Cancel timer if they undeafen/unmute
-  if (muteTimers.has(member.id)) {
-    clearTimeout(muteTimers.get(member.id));
-    muteTimers.delete(member.id);
-  }
-}
-
-    
+    }
 
     // ===============================
     // ✅ OLD VOICE JOIN LOGIC
