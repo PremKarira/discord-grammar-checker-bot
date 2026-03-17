@@ -1,7 +1,7 @@
 const botMessageTracker = new Map();
-const activeCleanups = new Set(); // ✅ NEW
+const activeCleanups = new Set();
+const cooldowns = new Map(); 
 
-// ✅ PUT YOUR CHANNEL IDs HERE
 const ALLOWED_CHANNELS = [
   "875427164076531743",
   "1352333161719402598",
@@ -12,6 +12,9 @@ export async function handleBotMessage(message) {
 
   if (!ALLOWED_CHANNELS.includes(channelId)) return;
 
+  // ❌ If in cooldown → skip
+  if (cooldowns.has(channelId)) return;
+
   if (!botMessageTracker.has(channelId)) {
     botMessageTracker.set(channelId, []);
   }
@@ -21,11 +24,10 @@ export async function handleBotMessage(message) {
 
   if (messages.length > 20) messages.shift();
 
-  // ❌ If already running cleanup → don't trigger again
   if (activeCleanups.has(channelId)) return;
 
   if (messages.length >= 6) {
-    activeCleanups.add(channelId); // 🔒 lock
+    activeCleanups.add(channelId);
 
     try {
       await message.channel.send(
@@ -54,15 +56,23 @@ export async function handleBotMessage(message) {
           }
 
           botMessageTracker.set(channelId, []);
-          activeCleanups.delete(channelId); // 🔓 unlock after done
+          activeCleanups.delete(channelId);
         }, 60000);
       } else {
         await message.channel.send("❌ Cleanup cancelled.");
-        activeCleanups.delete(channelId); // 🔓 unlock if cancelled
+
+        // 🔥 Add cooldown (2 min)
+        cooldowns.set(channelId, true);
+
+        setTimeout(() => {
+          cooldowns.delete(channelId);
+        }, 120000);
+
+        activeCleanups.delete(channelId);
       }
     } catch (err) {
       console.error("Cleaner error:", err);
-      activeCleanups.delete(channelId); // 🔓 safety unlock
+      activeCleanups.delete(channelId);
     }
   }
 }
