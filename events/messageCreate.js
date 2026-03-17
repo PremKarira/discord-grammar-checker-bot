@@ -13,6 +13,7 @@ import { editSnipeCommand } from "../commands/editSnipe.js";
 import { searchCommand } from "../commands/search.js";
 import { getUsers, saveBotStatus } from "../config/db.js";
 import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
+import { handleBotMessage } from "../utils/botMessageCleaner.js";
 
 export async function handleMessageCreate(
   client,
@@ -23,7 +24,10 @@ export async function handleMessageCreate(
   botStatus,
 ) {
   try {
-    if (message.author.bot) return;
+    if (message.author.bot) {
+      await handleBotMessage(message);
+      return;
+    }
 
     const users = await getUsers();
     const isOwner = message.author.id === OWNER_ID;
