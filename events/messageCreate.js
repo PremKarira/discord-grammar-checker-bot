@@ -14,6 +14,7 @@ import { searchCommand } from "../commands/search.js";
 import { getUsers, saveBotStatus } from "../config/db.js";
 import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
 import { handleBotMessage } from "../utils/botMessageCleaner.js";
+import { timerCommand } from "../commands/timer.js";
 
 export async function handleMessageCreate(
   client,
@@ -222,6 +223,13 @@ export async function handleMessageCreate(
 
       const { wakeupCommand } = await import("../commands/wakeup.js");
       await wakeupCommand(message, args, number);
+      return;
+    }
+
+    // TIMER COMMAND
+    if (content.startsWith(`${PREFIX}timer `)) {
+      const input = content.slice(`${PREFIX}timer `.length).trim();
+      await timerCommand(message, input);
       return;
     }
 
