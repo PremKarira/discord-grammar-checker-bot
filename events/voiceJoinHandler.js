@@ -6,7 +6,6 @@ const muteTimers = new Map();
 export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
   const GUILD_ID = "875427163598368779";
   const TEXT_CHANNEL_ID = "875427164076531743";
-
   const AFK_CHANNEL_ID = "1444000409483087903";
 
   try {
@@ -15,48 +14,47 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
     const member = newState.member;
 
-    // console.log(newState.selfMute && newState.selfDeaf);
-    // ===============================
-    // ✅ AUTO MOVE TO AFK IF MUTED+DEAF 1 MIN
-    // ===============================
-    if (newState.channelId === AFK_CHANNEL_ID) return;
-    if (newState.selfMute && newState.selfDeaf) {
+    if (
+      newState.channelId &&
+      newState.selfMute &&
+      newState.selfDeaf &&
+      newState.channelId !== AFK_CHANNEL_ID
+    ) {
       if (!muteTimers.has(member.id)) {
+        const userId = member.id;
+
         const timer = setTimeout(async () => {
           try {
-            const updatedState = member.voice;
+            const guild = newState.client.guilds.cache.get(GUILD_ID);
+            if (!guild) return;
 
-            if (updatedState.selfMute && updatedState.selfDeaf) {
-              // const AFK_CHANNEL_ID = "1444000409483087903";
-              const afkChannel =
-                member.guild.channels.cache.get(AFK_CHANNEL_ID);
+            const freshMember = await guild.members
+              .fetch(userId)
+              .catch(() => null);
+            if (!freshMember || !freshMember.voice.channelId) return;
+            if (freshMember.voice.channelId === AFK_CHANNEL_ID) return;
 
-              if (afkChannel && member.voice.channelId !== AFK_CHANNEL_ID) {
-                await member.voice.setChannel(afkChannel);
-                console.log(`Moved ${member.user.tag} to AFK`);
-              }
+            if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
+              await freshMember.voice
+                .setChannel(AFK_CHANNEL_ID)
+                .catch(() => {});
             }
-          } catch (err) {
-            console.error("AFK move error:", err);
           } finally {
-            muteTimers.delete(member.id);
+            muteTimers.delete(userId);
           }
         }, 60 * 1000);
 
         muteTimers.set(member.id, timer);
       }
     } else {
-      // Cancel timer if they undeafen/unmute
       if (muteTimers.has(member.id)) {
         clearTimeout(muteTimers.get(member.id));
         muteTimers.delete(member.id);
       }
     }
 
-    // ===============================
-    // ✅ OLD VOICE JOIN LOGIC
-    // ===============================
     if (!isBotActive.value) return;
+
     const voiceTargets = await getVoiceTargets();
 
     if (
@@ -64,7 +62,9 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       !oldState.channelId &&
       newState.channelId
     ) {
-      const channel = await newState.guild.channels.fetch(TEXT_CHANNEL_ID);
+      const channel = await newState.guild.channels
+        .fetch(TEXT_CHANNEL_ID)
+        .catch(() => null);
 
       if (channel) {
         const deleteButton = new ButtonBuilder()
@@ -75,9 +75,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
         const row = new ActionRowBuilder().addComponents(deleteButton);
 
         await channel.send({
-          content: `🗣️ ${
-            member.displayName || "Someone"
-          } has joined the voice chat...`,
+          content: `🗣️ ${member.displayName || "Someone"} has joined the voice chat...`,
           components: [row],
         });
       }
