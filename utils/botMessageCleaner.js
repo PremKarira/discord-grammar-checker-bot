@@ -1,32 +1,47 @@
 const botMessageTracker = new Map();
 const activeCleanups = new Set();
-const cooldowns = new Map(); 
+const cooldowns = new Map();
 
 const ALLOWED_CHANNELS = [
   "875427164076531743",
   "1352333161719402598",
 ];
 
+// CONFIG
+const MESSAGE_THRESHOLD = 6;
+const TRACK_LIMIT = 20;
+const TIME_WINDOW = 60 * 1000; // 1 min
+const CLEANUP_DELAY = 60 * 1000; // 1 min
+const COOLDOWN_TIME = 2 * 60 * 1000; // 2 min
+
 export async function handleBotMessage(message) {
   const channelId = message.channel.id;
 
   if (!ALLOWED_CHANNELS.includes(channelId)) return;
-
-  // ❌ If in cooldown → skip
   if (cooldowns.has(channelId)) return;
 
+  // init tracker
   if (!botMessageTracker.has(channelId)) {
     botMessageTracker.set(channelId, []);
   }
 
-  const messages = botMessageTracker.get(channelId);
-  messages.push(message);
+  let messages = botMessageTracker.get(channelId);
 
-  if (messages.length > 20) messages.shift();
+  // push with timestamp
+  messages.push({ msg: message, time: Date.now() });
 
+  // limit size
+  if (messages.length > TRACK_LIMIT) messages.shift();
+
+  // filter last 1 min messages
+  const now = Date.now();
+  messages = messages.filter((m) => now - m.time < TIME_WINDOW);
+  botMessageTracker.set(channelId, messages);
+
+  // avoid duplicate cleanup
   if (activeCleanups.has(channelId)) return;
 
-  if (messages.length >= 6) {
+  if (messages.length >= MESSAGE_THRESHOLD) {
     activeCleanups.add(channelId);
 
     try {
@@ -47,32 +62,40 @@ export async function handleBotMessage(message) {
         await message.channel.send("🧹 Cleaning bot messages in 1 minute...");
 
         setTimeout(async () => {
-          const msgsToDelete = botMessageTracker.get(channelId) || [];
+          const msgsToDelete =
+            botMessageTracker.get(channelId) || [];
 
-          for (const msg of msgsToDelete) {
-            if (msg.deletable) {
-              await msg.delete().catch(() => {});
+          for (const m of msgsToDelete) {
+            if (m.msg.deletable) {
+              await m.msg.delete().catch(() => {});
             }
           }
 
+          // reset tracker
           botMessageTracker.set(channelId, []);
           activeCleanups.delete(channelId);
-        }, 60000);
+        }, CLEANUP_DELAY);
       } else {
         await message.channel.send("❌ Cleanup cancelled.");
 
-        // 🔥 Add cooldown (2 min)
-        cooldowns.set(channelId, true);
+        // reset tracker so it can trigger again
+        botMessageTracker.set(channelId, []);
 
+        // remove active flag BEFORE cooldown
+        activeCleanups.delete(channelId);
+
+        // apply cooldown
+        cooldowns.set(channelId, true);
         setTimeout(() => {
           cooldowns.delete(channelId);
-        }, 120000);
-
-        activeCleanups.delete(channelId);
+        }, COOLDOWN_TIME);
       }
     } catch (err) {
       console.error("Cleaner error:", err);
+
+      // fail-safe reset
       activeCleanups.delete(channelId);
+      botMessageTracker.set(channelId, []);
     }
   }
 }
