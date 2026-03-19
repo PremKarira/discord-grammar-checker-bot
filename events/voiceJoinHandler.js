@@ -7,6 +7,8 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
   const GUILD_ID = "875427163598368779";
   const TEXT_CHANNEL_ID = "875427164076531743";
 
+  const AFK_CHANNEL_ID = "1444000409483087903";
+
   try {
     if (newState.guild.id !== GUILD_ID) return;
     if (newState.member.user.bot) return;
@@ -25,7 +27,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
             const updatedState = member.voice;
 
             if (updatedState.selfMute && updatedState.selfDeaf) {
-              const AFK_CHANNEL_ID = "1444000409483087903";
+              // const AFK_CHANNEL_ID = "1444000409483087903";
               const afkChannel =
                 member.guild.channels.cache.get(AFK_CHANNEL_ID);
 
