@@ -170,10 +170,13 @@ export async function handleMessageCreate(
       await editSnipeCommand(message);
       return;
     }
+    // SEARCH / PROMPT COMMAND (alias)
+    if (
+      content.startsWith(`${PREFIX}search `) ||
+      content.startsWith(`${PREFIX}prompt `)
+    ) {
+      const textToSearch = content.slice(content.indexOf(" ") + 1).trim();
 
-    // SEARCH COMMAND
-    if (content.startsWith(`${PREFIX}search `)) {
-      const textToSearch = content.slice(`${PREFIX}search `.length).trim();
       await searchCommand(message, [textToSearch]);
       return;
     }
@@ -233,7 +236,7 @@ export async function handleMessageCreate(
       return;
     }
 
-    // TARGET MESSAGE
+    // analyze and forward if author is target
     if (isTarget && content) {
       try {
         const supportChannel = await client.channels.fetch(
@@ -248,6 +251,18 @@ export async function handleMessageCreate(
       }
       await analyzeText(client, message, content, false);
     }
+
+    if (isTester && content.startsWith(`${PREFIX}reply `)) {
+      const replyText = content.slice(`${PREFIX}reply `.length).trim();
+
+      if (!replyText) {
+        return message.reply("Please provide text to reply.");
+      }
+
+      await handleReplyMessage(message, content);
+    }
+
+    // REPLY TARGET
     if (
       users.replyTargets.includes(message.author.id) &&
       content &&
