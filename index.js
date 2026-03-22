@@ -94,6 +94,14 @@ client.once(Events.ClientReady, async () => {
 // client.on("error", console.error);
 
 client.on("messageCreate", async (message) => {
+  if (message.content.toLowerCase() === "!!!ping") {
+    const messageLatency = Date.now() - message.createdTimestamp;
+
+    return message.reply(
+      `🏓 Pong!\n` + `⚡ Message Latency: ${messageLatency}ms`,
+    );
+  }
+
   await handleMessageCreate(
     client,
     message,
