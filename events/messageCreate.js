@@ -15,6 +15,29 @@ import { getUsers, saveBotStatus } from "../config/db.js";
 import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
 import { handleBotMessage } from "../utils/botMessageCleaner.js";
 import { timerCommand } from "../commands/timer.js";
+import util from "util";
+
+const clean = async (client, text) => {
+  if (text && text.constructor.name === "Promise") {
+    text = await text;
+  }
+
+  if (typeof text !== "string") {
+    text = util.inspect(text, { depth: 1 });
+  }
+
+  // prevent token leak
+  if (client.token) {
+    text = text.replaceAll(client.token, "[REDACTED]");
+  }
+
+  // prevent mentions
+  text = text
+    .replace(/`/g, "`" + String.fromCharCode(8203))
+    .replace(/@/g, "@" + String.fromCharCode(8203));
+
+  return text;
+};
 
 export async function handleMessageCreate(
   client,
@@ -35,6 +58,30 @@ export async function handleMessageCreate(
     const isTester = users.testers.includes(message.author.id);
     const isTarget = users.targets.includes(message.author.id);
     const content = message.content.trim();
+
+    // EVAL COMMAND (OWNER ONLY)
+    if (isOwner && content.startsWith(`${PREFIX}eval `)) {
+
+      const code = content.slice(`${PREFIX}eval `.length);
+
+      try {
+        let evaled = eval(code);
+        const cleaned = await clean(client, evaled);
+        if (cleaned.length > 1900) {
+          return message.channel.send("⚠️ Output too long.");
+        }
+
+        await message.channel.send(`\`\`\`js\n${cleaned}\n\`\`\``);
+      } catch (err) {
+        const cleanedError = await clean(client, err);
+
+        await message.channel.send(
+          `❌ ERROR:\n\`\`\`js\n${cleanedError}\n\`\`\``,
+        );
+      }
+
+      return;
+    }
 
     // LIST
     if (isOwner && content === `${PREFIX}list`) {
