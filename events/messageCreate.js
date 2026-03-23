@@ -39,6 +39,16 @@ const clean = async (client, text) => {
   return text;
 };
 
+function splitMessage(text, maxLength = 1800) {
+  const chunks = [];
+
+  for (let i = 0; i < text.length; i += maxLength) {
+    chunks.push(text.slice(i, i + maxLength));
+  }
+
+  return chunks;
+}
+
 export async function handleMessageCreate(
   client,
   message,
@@ -60,15 +70,41 @@ export async function handleMessageCreate(
     const content = message.content.trim();
 
     // EVAL COMMAND (OWNER ONLY)
-    if (isOwner && content.startsWith(`${PREFIX}eval `)) {
-
-      const code = content.slice(`${PREFIX}eval `.length);
+    if (isOwner && content.startsWith(`${PREFIX}eval`)) {
+      const code = content.slice(`${PREFIX}eval`.length).trim();
+      if (code.includes("process.env")) {
+        return message.reply("❌ Access denied");
+      }
 
       try {
-        let evaled = eval(code);
+        // ================= EVAL EMIT() =================
+        if (code.startsWith("emit()")) {
+          if (!message.reference) {
+            return message.reply("❌ Reply to a message to use emit()");
+          }
+
+          const repliedMsg = await message.fetchReference();
+
+          if (!repliedMsg || !repliedMsg.content) {
+            return message.reply("❌ Invalid replied message");
+          }
+          client.emit("messageCreate", repliedMsg);
+
+          return message.reply(
+            `⚡ Executed emit() on the replied message:\n> ${repliedMsg.content} \nas author ${repliedMsg.author.tag}`,
+          );
+        }
+
+        // ================= NORMAL EVAL =================
+        const evaled = await eval(`(async () => { return ${code} })()`);
+
         const cleaned = await clean(client, evaled);
-        if (cleaned.length > 1900) {
-          return message.channel.send("⚠️ Output too long.");
+        if (cleaned.length > 2000) {
+          const buffer = Buffer.from(cleaned, "utf-8");
+
+          return message.channel.send({
+            files: [{ attachment: buffer, name: "output.txt" }],
+          });
         }
 
         await message.channel.send(`\`\`\`js\n${cleaned}\n\`\`\``);
