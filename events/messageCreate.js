@@ -57,6 +57,7 @@ export async function handleMessageCreate(
   isBotActive,
   botStatus,
 ) {
+  if (message.__emitted) return;
   try {
     if (message.author.bot) {
       await handleBotMessage(message);
@@ -100,8 +101,8 @@ export async function handleMessageCreate(
             }
             repliedMsg.author = mention;
           }
-
           client.emit("messageCreate", repliedMsg);
+          repliedMsg.__emitted = true;
 
           return message.reply(
             `⚡ Executed emit() on the replied message:\n> ${repliedMsg.content} \nas author ${repliedMsg.author.tag}`,
