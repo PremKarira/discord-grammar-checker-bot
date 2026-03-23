@@ -349,14 +349,37 @@ export async function handleMessageCreate(
       await analyzeText(client, message, content, false);
     }
 
-    if (isTester && content.startsWith(`${PREFIX}reply `)) {
-      const replyText = content.slice(`${PREFIX}reply `.length).trim();
+    if (isTester && content.startsWith(`${PREFIX}reply`)) {
+      let replyText = content.slice(`${PREFIX}reply`.length).trim();
+      let targetMessage = message;
 
-      if (!replyText) {
-        return message.reply("Please provide text to reply.");
+      try {
+        if (!replyText) {
+          if (!message.reference) {
+            return message.reply("❌ Provide text or reply to a message.");
+          }
+
+          const repliedMsg = await message.channel.messages.fetch(
+            message.reference.messageId,
+          );
+
+          replyText = repliedMsg.content;
+
+          if (!replyText) {
+            return message.reply("⚠️ Replied message has no text.");
+          }
+
+          targetMessage = repliedMsg;
+
+          // ghost
+          if (message.deletable) await message.delete().catch(() => {});
+        }
+
+        await handleReplyMessage(targetMessage, replyText);
+      } catch (err) {
+        console.error(err);
+        message.reply("❌ Failed to process reply.");
       }
-
-      await handleReplyMessage(message, content);
     }
 
     // REPLY TARGET
