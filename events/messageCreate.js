@@ -88,6 +88,19 @@ export async function handleMessageCreate(
           if (!repliedMsg || !repliedMsg.content) {
             return message.reply("❌ Invalid replied message");
           }
+
+          const args = code.split(/\s+/);
+
+          // ✅ handle -a flag
+          if (args.includes("-a")) {
+            const mention = message.mentions.users.first();
+
+            if (!mention) {
+              return message.reply("❌ Mention a user with -a");
+            }
+            repliedMsg.author = mention;
+          }
+
           client.emit("messageCreate", repliedMsg);
 
           return message.reply(
