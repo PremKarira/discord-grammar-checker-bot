@@ -52,7 +52,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       }
     }
 
-    if (!isBotActive.value) return;
+    // if (!isBotActive.value) return;
 
     const voiceTargets = await getVoiceTargets();
 
