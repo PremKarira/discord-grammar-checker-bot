@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import { reportError } from "./reportError.js";
 
-export async function handleReplyMessage(message, text) {
+export async function handleReplyMessage(client, message, text) {
   try {
     const response = await fetch(process.env.N8N_WEBHOOK_URL, {
       method: "POST",
@@ -21,6 +21,12 @@ Use same language as the user.`,
       }),
     });
 
+    // ❗ handle API errors
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API ${response.status}: ${errText}`);
+    }
+
     let raw = await response.text();
     raw = raw.replace(/```/g, "").trim();
 
@@ -38,9 +44,16 @@ Use same language as the user.`,
     await message.reply(output);
   } catch (err) {
     await reportError(
-      null,
+      client,
       err,
       `ReplyMessage Error: message from ${message.author.tag}`,
+    );
+
+    // ✅ ALWAYS reply to user
+    await message.reply(
+      err.message.includes("503")
+        ? "⚠️ AI is busy right now, try again in a few seconds."
+        : "⚠️ Something went wrong while generating reply."
     );
   }
 }

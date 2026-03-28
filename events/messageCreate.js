@@ -375,7 +375,7 @@ export async function handleMessageCreate(
           if (message.deletable) await message.delete().catch(() => {});
         }
 
-        await handleReplyMessage(targetMessage, replyText);
+        await handleReplyMessage(client, targetMessage, replyText);
       } catch (err) {
         console.error(err);
         message.reply("❌ Failed to process reply.");
@@ -388,7 +388,7 @@ export async function handleMessageCreate(
       content &&
       !content.startsWith(PREFIX)
     ) {
-      await handleReplyMessage(message, content);
+      await handleReplyMessage(client, message, content);
     }
   } catch (err) {
     await reportError(client, err, "Message Handler");
