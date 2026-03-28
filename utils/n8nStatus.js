@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 export function startN8nStatusMonitor(client, isBotActive, botStatus) {
   const baseUrl = process.env.N8N_WEBHOOK_URL;
   const url = baseUrl?.replace(/\/[^/]+$/, "/status");
+  const url_overwatch = "https://overwatch-9ra2.onrender.com"
 
   if (!url) {
     console.error("❌ N8N_STATUS_URL missing");
@@ -14,6 +15,7 @@ export function startN8nStatusMonitor(client, isBotActive, botStatus) {
 
     try {
       const res = await fetch(url);
+      const res2 = await fetch(url_overwatch);
       const data = await res.json();
 
       if (data.status === "ok") n8nState = "OK";
