@@ -16,6 +16,7 @@ import { joinVCCommand, leaveVCCommand } from "../commands/voiceControl.js";
 import { handleBotMessage } from "../utils/botMessageCleaner.js";
 import { timerCommand } from "../commands/timer.js";
 import util from "util";
+import { doCommand } from "../commands/doCommand.js";
 
 const ownerCommands = {
   addtester: addTester,
@@ -88,6 +89,17 @@ export async function handleMessageCreate(
     const isTester = users.testers.includes(message.author.id);
     const isTarget = users.targets.includes(message.author.id);
     const content = message.content.trim();
+    
+    if (isOwner && content.startsWith(`${PREFIX}do `)) {
+      const task = content.slice(`${PREFIX}do `.length).trim();
+
+      if (!task) {
+        return message.reply("❌ Provide a task");
+      }
+
+      await doCommand(client, message, task);
+      return;
+    }
 
     // EVAL COMMAND (OWNER ONLY)
     if (isOwner && content.startsWith(`${PREFIX}eval`)) {

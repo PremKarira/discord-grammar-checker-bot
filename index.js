@@ -20,6 +20,7 @@ import { handleMessageDelete } from "./events/messageDelete.js";
 import { handleMessageUpdate } from "./events/messageUpdate.js";
 import { forwardMessage } from "./utils/forwardmessage.js";
 import { joinVoiceChannel } from "@discordjs/voice";
+import { handleDoButtons } from "./commands/doCommand.js";
 
 const client = new Client({
   intents: [
@@ -136,6 +137,11 @@ client.on("presenceUpdate", async (oldPresence, newPresence) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+  if (interaction.isButton()) {
+    if (interaction.customId.startsWith("do_")) {
+      return handleDoButtons(client, interaction);
+    }
+  }
   await handleInteractionCreate(interaction);
 });
 
