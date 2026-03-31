@@ -4,7 +4,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 const pendingExec = new Map(); // userId -> { code, messageId }
 
 // ================= LOGGER =================
-async function logToSupport(client, text) {
+export async function logToSupport(client, text) {
   try {
     const channel = await client.channels.fetch(process.env.SUPPORT_CHANNEL_ID);
     if (!channel) return;
