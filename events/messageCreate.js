@@ -17,6 +17,25 @@ import { handleBotMessage } from "../utils/botMessageCleaner.js";
 import { timerCommand } from "../commands/timer.js";
 import util from "util";
 
+const ownerCommands = {
+  addtester: addTester,
+  removetester: removeTester,
+  addtarget: addTarget,
+  removetarget: removeTarget,
+  addvoicetarget: addVoiceTarget,
+  removevoicetarget: removeVoiceTarget,
+  addreplytarget: addReplyTarget,
+  removereplytarget: removeReplyTarget,
+};
+
+function extractId(message, input) {
+  if (message.mentions.users.size > 0) {
+    return message.mentions.users.first().id;
+  }
+
+  return input.trim();
+}
+
 const clean = async (client, text) => {
   if (text && text.constructor.name === "Promise") {
     text = await text;
@@ -198,48 +217,63 @@ export async function handleMessageCreate(
     // Ignore bot active state only for OWNER
     if (!isOwner && !botStatus.commandEnabled) return;
 
-    // ADD/REMOVE TESTER
-    if (isOwner && content.startsWith(`${PREFIX}addtester `)) {
-      await addTester(message, content.slice(PREFIX.length + 10).trim());
-      return;
-    }
-    if (isOwner && content.startsWith(`${PREFIX}removetester `)) {
-      await removeTester(message, content.slice(PREFIX.length + 13).trim());
-      return;
-    }
+    // // ADD/REMOVE TESTER
+    // if (isOwner && content.startsWith(`${PREFIX}addtester `)) {
+    //   await addTester(message, content.slice(PREFIX.length + 10).trim());
+    //   return;
+    // }
+    // if (isOwner && content.startsWith(`${PREFIX}removetester `)) {
+    //   await removeTester(message, content.slice(PREFIX.length + 13).trim());
+    //   return;
+    // }
 
-    // ADD/REMOVE TARGET
-    if (isOwner && content.startsWith(`${PREFIX}addtarget `)) {
-      await addTarget(message, content.slice(PREFIX.length + 10).trim());
-      return;
-    }
-    if (isOwner && content.startsWith(`${PREFIX}removetarget `)) {
-      await removeTarget(message, content.slice(PREFIX.length + 13).trim());
-      return;
-    }
-    // ADD/REMOVE VOICE TARGET
-    if (isOwner && content.startsWith(`${PREFIX}addvoicetarget `)) {
-      await addVoiceTarget(message, content.slice(PREFIX.length + 15).trim());
-      return;
-    }
-    if (isOwner && content.startsWith(`${PREFIX}removevoicetarget `)) {
-      await removeVoiceTarget(
-        message,
-        content.slice(PREFIX.length + 18).trim(),
-      );
-      return;
-    }
-    // ADD/REMOVE REPLY TARGET
-    if (isOwner && content.startsWith(`${PREFIX}addreplytarget `)) {
-      await addReplyTarget(message, content.slice(PREFIX.length + 15).trim());
-      return;
-    }
+    // // ADD/REMOVE TARGET
+    // if (isOwner && content.startsWith(`${PREFIX}addtarget `)) {
+    //   await addTarget(message, content.slice(PREFIX.length + 10).trim());
+    //   return;
+    // }
+    // if (isOwner && content.startsWith(`${PREFIX}removetarget `)) {
+    //   await removeTarget(message, content.slice(PREFIX.length + 13).trim());
+    //   return;
+    // }
+    // // ADD/REMOVE VOICE TARGET
+    // if (isOwner && content.startsWith(`${PREFIX}addvoicetarget `)) {
+    //   await addVoiceTarget(message, content.slice(PREFIX.length + 15).trim());
+    //   return;
+    // }
+    // if (isOwner && content.startsWith(`${PREFIX}removevoicetarget `)) {
+    //   await removeVoiceTarget(
+    //     message,
+    //     content.slice(PREFIX.length + 18).trim(),
+    //   );
+    //   return;
+    // }
+    // // ADD/REMOVE REPLY TARGET
+    // if (isOwner && content.startsWith(`${PREFIX}addreplytarget `)) {
+    //   await addReplyTarget(message, content.slice(PREFIX.length + 15).trim());
+    //   return;
+    // }
 
-    if (isOwner && content.startsWith(`${PREFIX}removereplytarget `)) {
-      await removeReplyTarget(
-        message,
-        content.slice(PREFIX.length + 18).trim(),
-      );
+    // if (isOwner && content.startsWith(`${PREFIX}removereplytarget `)) {
+    //   await removeReplyTarget(
+    //     message,
+    //     content.slice(PREFIX.length + 18).trim(),
+    //   );
+    //   return;
+    // }
+
+    const argsOwnerCommands = content.trim().split(/\s+/);
+    const commandOwnerCommands = argsOwnerCommands[0].slice(PREFIX.length);
+    const inputOwnerCommands = argsOwnerCommands.slice(1).join(" ");
+
+    if (isOwner && ownerCommands[commandOwnerCommands]) {
+      const id = extractId(message, inputOwnerCommands);
+
+      if (!id) {
+        return message.reply("❌ Provide user mention or ID");
+      }
+
+      await ownerCommands[commandOwnerCommands](message, id);
       return;
     }
 
@@ -257,7 +291,7 @@ export async function handleMessageCreate(
     }
 
     // SNIPE COMMAND
-    if (content.startsWith(`${PREFIX}snipe`)) {
+    if (content === `${PREFIX}snipe` || content.startsWith(`${PREFIX}snipe `)) {
       const args = content.split(/\s+/).slice(1);
       await snipeCommand(message, args);
       return;
