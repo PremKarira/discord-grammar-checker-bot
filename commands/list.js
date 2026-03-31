@@ -29,7 +29,7 @@ export async function listUsers(message, users, botStatus) {
         const member = await guild.members.fetch(id).catch(() => null);
         const name = member ? member.displayName : "Unknown User";
 
-        return `• <@${id}> ${name} (ID: ${id})`;
+        return `• <@${id}> ${name} \n\`(ID: ${id})\``;
       })
     );
 
