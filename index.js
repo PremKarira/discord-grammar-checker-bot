@@ -21,6 +21,8 @@ import { handleMessageUpdate } from "./events/messageUpdate.js";
 import { forwardMessage } from "./utils/forwardmessage.js";
 import { joinVoiceChannel } from "@discordjs/voice";
 import { handleDoButtons } from "./commands/doCommand.js";
+import { setupErrorHandler } from "../utils/errorHandler.js";
+import { logToSupport } from "../commands/doCommand.js";
 
 const client = new Client({
   intents: [
@@ -78,6 +80,8 @@ client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   startN8nStatusMonitor(client, isBotActive, botStatus);
   // await setupVoiceOnReady(client, "Client 1");
+
+  setupErrorHandler(client, logToSupport);
 });
 
 // client2.once(Events.ClientReady, async () => {
