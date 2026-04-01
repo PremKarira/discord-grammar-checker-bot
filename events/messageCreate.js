@@ -97,7 +97,7 @@ export async function handleMessageCreate(
         return message.reply("❌ Provide a task");
       }
 
-      await doCommand(client, message, task);
+      await doCommand(client, message, task, PREFIX);
       return;
     }
 

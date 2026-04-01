@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-
+import { EmbedBuilder, AttachmentBuilder } from "discord.js";
 const pendingExec = new Map(); // userId -> { code, messageId }
 
 // ================= LOGGER =================
@@ -23,7 +23,7 @@ export async function logToSupport(client, text) {
 }
 
 // ================= DO COMMAND =================
-export async function doCommand(client, message, task) {
+export async function doCommand(client, message, task, PREFIX) {
   try {
     const res = await fetch(process.env.N8N_WEBHOOK_URL, {
       method: "POST",
@@ -46,6 +46,8 @@ STRICT RULES:
 - Always use message.member
 - Use discord.js v14
 - Use await (no .then)
+- NEVER use require or import
+- EmbedBuilder and AttachmentBuilder are already available
 
 Examples:
 
@@ -85,12 +87,12 @@ ONLY RETURN RAW CODE
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId("do_confirm")
+        .setCustomId(`${PREFIX}do_confirm`)
         .setLabel("✅ Confirm")
         .setStyle(ButtonStyle.Success),
 
       new ButtonBuilder()
-        .setCustomId("do_cancel")
+        .setCustomId(`${PREFIX}do_cancel`)
         .setLabel("❌ Cancel")
         .setStyle(ButtonStyle.Danger),
     );
@@ -108,7 +110,7 @@ ONLY RETURN RAW CODE
 }
 
 // ================= BUTTON HANDLER =================
-export async function handleDoButtons(client, interaction) {
+export async function handleDoButtons(client, interaction, PREFIX) {
   if (!interaction.isButton()) return;
 
   const userId = interaction.user.id;
@@ -132,7 +134,7 @@ export async function handleDoButtons(client, interaction) {
   const { code, messageId } = data;
 
   // CANCEL
-  if (interaction.customId === "do_cancel") {
+  if (interaction.customId === `${PREFIX}do_cancel`) {
     pendingExec.delete(userId);
 
     try {
@@ -152,7 +154,7 @@ export async function handleDoButtons(client, interaction) {
   }
 
   // CONFIRM
-  if (interaction.customId === "do_confirm") {
+  if (interaction.customId === `${PREFIX}do_confirm`) {
     pendingExec.delete(userId);
 
     try {
@@ -160,25 +162,27 @@ export async function handleDoButtons(client, interaction) {
         async function () {},
       ).constructor;
 
-      const fn = new AsyncFunction(
-        "client",
-        "message",
-        `
-        "use strict";
+const fn = new AsyncFunction(
+  "client",
+  "message",
+  "EmbedBuilder",
+  "AttachmentBuilder",
+  `
+  "use strict";
 
-        const process = undefined;
-        const require = undefined;
-        const global = undefined;
-        const module = undefined;
-        const exports = undefined;
+  const process = undefined;
+  const require = undefined;
+  const global = undefined;
+  const module = undefined;
+  const exports = undefined;
 
-        ${code}
-        `,
-      );
+  ${code}
+  `
+);
 
       const message = await interaction.channel.messages.fetch(messageId);
 
-      await fn(client, message);
+      await fn(client, message, EmbedBuilder, AttachmentBuilder);
 
       try {
         await interaction.update({

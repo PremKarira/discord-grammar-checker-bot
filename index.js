@@ -142,8 +142,8 @@ client.on("presenceUpdate", async (oldPresence, newPresence) => {
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isButton()) {
-    if (interaction.customId.startsWith("do_")) {
-      return handleDoButtons(client, interaction);
+    if (interaction.customId.startsWith(`${PREFIX}do_`)) {
+      return handleDoButtons(client, interaction, PREFIX);
     }
   }
   await handleInteractionCreate(interaction);
