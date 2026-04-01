@@ -1,21 +1,17 @@
 export function setupErrorHandler(client, logToSupport) {
   const originalError = console.error;
 
-  // ================= HELPER =================
   function formatArgs(args) {
     return args
       .map((a) => {
         if (!a) return "undefined";
-
-        if (a instanceof Error) {
-          return a.stack || a.message;
-        }
+        if (a instanceof Error) return a.stack || a.message;
 
         if (typeof a === "object") {
           try {
             return JSON.stringify(a, null, 2);
           } catch {
-            return "[Unserializable Object]";
+            return "[Unserializable]";
           }
         }
 
@@ -24,7 +20,7 @@ export function setupErrorHandler(client, logToSupport) {
       .join("\n");
   }
 
-  function shouldIgnore(text) {
+  function ignore(text) {
     return (
       text.includes("Unknown interaction") ||
       text.includes('"code": 10062') ||
@@ -33,27 +29,22 @@ export function setupErrorHandler(client, logToSupport) {
     );
   }
 
-  // ================= console.error override =================
   console.error = async (...args) => {
     const text = formatArgs(args);
+    if (ignore(text)) return;
 
-    // ❌ ignore noisy Discord API errors
-    if (shouldIgnore(text)) return;
-
-    // ✅ still print locally
-    // originalError(...args);
+    originalError(...args);
 
     try {
       await logToSupport(client, `🚨 console.error:\n${text}`);
     } catch {}
   };
 
-  // ================= unhandled promise =================
   process.on("unhandledRejection", async (reason) => {
     const text =
       reason instanceof Error ? reason.stack : JSON.stringify(reason, null, 2);
 
-    if (shouldIgnore(text)) return;
+    if (ignore(text)) return;
 
     originalError("Unhandled Rejection:", reason);
 
@@ -62,11 +53,10 @@ export function setupErrorHandler(client, logToSupport) {
     } catch {}
   });
 
-  // ================= uncaught exception =================
   process.on("uncaughtException", async (err) => {
-    const text = err?.stack || err?.message || String(err);
+    const text = err?.stack || err?.message;
 
-    if (shouldIgnore(text)) return;
+    if (ignore(text)) return;
 
     originalError("Uncaught Exception:", err);
 

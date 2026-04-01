@@ -16,6 +16,7 @@ const COOLDOWN_TIME = 2 * 60 * 1000; // 2 min
 
 export async function handleBotMessage(message) {
   const channelId = message.channel.id;
+  if (message.author.id === message.client.user.id) return;
 
   if (!ALLOWED_CHANNELS.includes(channelId)) return;
   if (cooldowns.has(channelId)) return;

@@ -1,7 +1,32 @@
 import fetch from "node-fetch";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { EmbedBuilder, AttachmentBuilder } from "discord.js";
-const pendingExec = new Map(); // userId -> { code, messageId }
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  AttachmentBuilder,
+} from "discord.js";
+
+const pendingExec = new Map(); // userId -> { code, messageId, execId, task }
+
+function replaceMentionsWithIds(message, text) {
+  // replace user mentions <@123> or <@!123>
+  text = text.replace(/<@!?(\d+)>/g, (match, id) => {
+    return id;
+  });
+
+  // replace role mentions <@&123>
+  text = text.replace(/<@&(\d+)>/g, (match, id) => {
+    return id;
+  });
+
+  // replace channel mentions <#123>
+  text = text.replace(/<#(\d+)>/g, (match, id) => {
+    return id;
+  });
+
+  return text;
+}
 
 // ================= LOGGER =================
 export async function logToSupport(client, text) {
@@ -17,13 +42,14 @@ export async function logToSupport(client, text) {
     } else {
       await channel.send(`\`\`\`\n${text}\n\`\`\``);
     }
-  } catch (err) {
-    console.error("Log error:", err);
-  }
+  } catch {}
 }
 
 // ================= DO COMMAND =================
 export async function doCommand(client, message, task, PREFIX) {
+  const execId = `EXEC-${Date.now()}`;
+  task = replaceMentionsWithIds(message, task);
+
   try {
     const res = await fetch(process.env.N8N_WEBHOOK_URL, {
       method: "POST",
@@ -76,13 +102,13 @@ ONLY RETURN RAW CODE
 
     if (!code) return message.reply("❌ Empty AI response");
 
-    // ✅ store BOTH code + messageId
     pendingExec.set(message.author.id, {
       code,
       messageId: message.id,
+      execId,
+      task,
     });
 
-    // ⏳ auto-expire
     setTimeout(() => pendingExec.delete(message.author.id), 60000);
 
     const row = new ActionRowBuilder().addComponents(
@@ -94,15 +120,21 @@ ONLY RETURN RAW CODE
       new ButtonBuilder()
         .setCustomId(`${PREFIX}do_cancel`)
         .setLabel("❌ Cancel")
-        .setStyle(ButtonStyle.Danger),
+        .setStyle(ButtonStyle.Danger)
     );
 
     await message.reply({
-      content: `⚠️ Confirm execution:\n\`\`\`js\n${code.slice(0, 1800)}\n\`\`\``,
+      content: `⚠️ Confirm execution\nID: ${execId}\n\`\`\`js\n${code.slice(
+        0,
+        1500
+      )}\n\`\`\``,
       components: [row],
     });
 
-    await logToSupport(client, `🧠 TASK:\n${task}\n\n💻 CODE:\n${code}`);
+    await logToSupport(
+      client,
+      `🧠 NEW TASK\nID: ${execId}\nUSER: ${message.author.tag}\n\nTASK:\n${task}\n\nCODE:\n${code}`
+    );
   } catch (err) {
     console.error(err);
     await message.reply("❌ Failed to generate code");
@@ -118,106 +150,76 @@ export async function handleDoButtons(client, interaction, PREFIX) {
 
   if (!data) {
     return interaction.reply({
-      content: "❌ No pending task or expired",
+      content: "❌ No pending task",
       ephemeral: true,
     });
   }
 
-  // 🔒 restrict to original user
-  if (interaction.user.id !== userId) {
-    return interaction.reply({
-      content: "❌ This is not your task",
-      ephemeral: true,
-    });
-  }
+  const { code, messageId, execId, task } = data;
 
-  const { code, messageId } = data;
-
-  // CANCEL
   if (interaction.customId === `${PREFIX}do_cancel`) {
     pendingExec.delete(userId);
-
-    try {
-      await interaction.update({
-        content: "❌ Cancelled",
-        components: [],
-      });
-    } catch (updateErr) {
-      if (updateErr.code === 10008) {
-        await interaction.channel.send("❌ Cancelled");
-      } else {
-        throw updateErr;
-      }
-    }
-
-    return;
+    return interaction.update({ content: "❌ Cancelled", components: [] });
   }
 
-  // CONFIRM
   if (interaction.customId === `${PREFIX}do_confirm`) {
     pendingExec.delete(userId);
 
     try {
+      await interaction.deferUpdate().catch(() => {});
+
       const AsyncFunction = Object.getPrototypeOf(
-        async function () {},
+        async function () {}
       ).constructor;
 
-const fn = new AsyncFunction(
-  "client",
-  "message",
-  "EmbedBuilder",
-  "AttachmentBuilder",
-  `
-  "use strict";
+      const fn = new AsyncFunction(
+        "client",
+        "message",
+        "EmbedBuilder",
+        "AttachmentBuilder",
+        `
+"use strict";
+const process = undefined;
+const require = undefined;
+const global = undefined;
+const module = undefined;
+const exports = undefined;
 
-  const process = undefined;
-  const require = undefined;
-  const global = undefined;
-  const module = undefined;
-  const exports = undefined;
-
-  ${code}
-  `
-);
+${code}
+`
+      );
 
       const message = await interaction.channel.messages.fetch(messageId);
 
+      const start = Date.now();
+
       await fn(client, message, EmbedBuilder, AttachmentBuilder);
 
-      try {
-        await interaction.update({
-          content: "✅ Executed successfully",
-          components: [],
-        });
-      } catch (updateErr) {
-        if (updateErr.code === 10008) {
-          await interaction.channel.send("✅ Executed successfully");
-        } else {
-          throw updateErr;
-        }
-      }
+      const time = Date.now() - start;
+
+      await interaction.editReply({
+        content: `✅ Executed (${time}ms)`,
+        components: [],
+      }).catch(() => {});
 
       await logToSupport(
         client,
-        `✅ EXECUTED by ${interaction.user.tag}\n\n${code}`,
+        `✅ SUCCESS\nID: ${execId}\nUSER: ${interaction.user.tag}\nTIME: ${time}ms\n\nTASK:\n${task}`
       );
     } catch (err) {
       console.error(err);
 
-      try {
-        await interaction.update({
+      await interaction
+        .editReply({
           content: "❌ Execution failed",
           components: [],
-        });
-      } catch (updateErr) {
-        if (updateErr.code === 10008) {
-          await interaction.channel.send("❌ Execution failed");
-        } else {
-          throw updateErr;
-        }
-      }
+        })
+        .catch(() => {});
 
-      await logToSupport(client, `❌ ERROR:\n${err.message}\n\nCODE:\n${code}`);
+      await logToSupport(
+        client,
+        `❌ FAILURE\nID: ${execId}\nUSER: ${interaction.user.tag}\n\nTASK:\n${task}\n\nERROR:\n${err.stack}\n\nCODE:\n${code}`
+      );
     }
   }
 }
