@@ -18,7 +18,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       newState.selfMute &&
       newState.selfDeaf &&
       (!newState.channelId || newState.channelId !== AFK_CHANNEL_ID)
-      && newState.user.id !== "428902961847205899"
+      && newState.member.user.id !== "428902961847205899"
     ) {
       if (!muteTimers.has(member.id)) {
         const userId = member.id;
