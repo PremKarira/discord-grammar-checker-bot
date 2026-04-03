@@ -14,11 +14,12 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
     const member = newState.member;
 
+    // ================= AFK LOGIC =================
     if (
       newState.selfMute &&
       newState.selfDeaf &&
-      (!newState.channelId || newState.channelId !== AFK_CHANNEL_ID)
-      && newState.member.user.id !== "428902961847205899"
+      (!newState.channelId || newState.channelId !== AFK_CHANNEL_ID) &&
+      member.user.id !== "428902961847205899"
     ) {
       if (!muteTimers.has(member.id)) {
         const userId = member.id;
@@ -28,16 +29,42 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
             const guild = newState.client.guilds.cache.get(GUILD_ID);
             if (!guild) return;
 
+            const afkChannel = guild.channels.cache.get(AFK_CHANNEL_ID);
+
             const freshMember = await guild.members
               .fetch(userId)
               .catch(() => null);
-            if (!freshMember || !freshMember.voice.channelId) return;
-            if (freshMember.voice.channelId === AFK_CHANNEL_ID) return;
 
-            if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
-              await freshMember.voice
-                .setChannel(AFK_CHANNEL_ID)
-                .catch(() => {});
+            if (!freshMember || !freshMember.voice.channelId) return;
+
+            // ✅ If AFK channel exists → move user
+            if (afkChannel) {
+              if (freshMember.voice.channelId === AFK_CHANNEL_ID) return;
+
+              if (
+                freshMember.voice.selfMute &&
+                freshMember.voice.selfDeaf
+              ) {
+                await freshMember.voice
+                  .setChannel(AFK_CHANNEL_ID)
+                  .catch(() => {});
+              }
+            }
+            // ❗ If AFK channel doesn't exist → rename user
+            else {
+              if (
+                freshMember.voice.selfMute &&
+                freshMember.voice.selfDeaf
+              ) {
+                const currentName =
+                  freshMember.nickname || freshMember.user.username;
+
+                if (!currentName.startsWith("[AFK] ")) {
+                  await freshMember
+                    .setNickname(`[AFK] ${currentName}`)
+                    .catch(() => {});
+                }
+              }
             }
           } finally {
             muteTimers.delete(userId);
@@ -47,12 +74,21 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
         muteTimers.set(member.id, timer);
       }
     } else {
+      // ❌ Cancel timer if user unmutes/undeafens
       if (muteTimers.has(member.id)) {
         clearTimeout(muteTimers.get(member.id));
         muteTimers.delete(member.id);
       }
+
+      // ✅ Remove AFK tag if present
+      const currentName = member.nickname || member.user.username;
+      if (currentName.startsWith("[AFK] ")) {
+        const newName = currentName.replace("[AFK] ", "");
+        await member.setNickname(newName).catch(() => {});
+      }
     }
 
+    // ================= JOIN MESSAGE =================
     // if (!isBotActive.value) return;
 
     const voiceTargets = await getVoiceTargets();
