@@ -6,11 +6,6 @@ import {
   EmbedBuilder,
   AttachmentBuilder,
 } from "discord.js";
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
 
 const pendingExec = new Map(); // userId -> { code, messageId, execId, task }
 
@@ -56,11 +51,15 @@ export async function doCommand(client, message, task, PREFIX) {
   task = replaceMentionsWithIds(message, task);
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      config: {
-        temperature: 0.2,
-        systemInstruction: `
+    const res = await fetch(process.env.N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.N8N_AUTH_HEADER,
+      },
+      body: JSON.stringify({
+        text_to_analyze: task,
+        mode: `
 You are a Discord bot code generator.
 
 STRICT RULES:
@@ -76,16 +75,30 @@ STRICT RULES:
 - NEVER use require or import
 - EmbedBuilder and AttachmentBuilder are already available
 
+Examples:
+
+const role = await message.guild.roles.create({
+  name: "alpha",
+  color: "Red"
+});
+await message.member.roles.add(role);
+
+await message.channel.send("hello");
+
 ONLY RETURN RAW CODE
 `,
-      },
-      contents: task,
+      }),
     });
 
-    let raw = response.text;
+    let raw = await res.text();
     raw = raw.replace(/```/g, "").trim();
 
     let code = raw;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.final_result) code = parsed.final_result;
+    } catch {}
 
     if (!code) return message.reply("❌ Empty AI response");
 
@@ -107,20 +120,20 @@ ONLY RETURN RAW CODE
       new ButtonBuilder()
         .setCustomId(`${PREFIX}do_cancel`)
         .setLabel("❌ Cancel")
-        .setStyle(ButtonStyle.Danger),
+        .setStyle(ButtonStyle.Danger)
     );
 
     await message.reply({
       content: `⚠️ Confirm execution\nID: ${execId}\n\`\`\`js\n${code.slice(
         0,
-        1500,
+        1500
       )}\n\`\`\``,
       components: [row],
     });
 
     await logToSupport(
       client,
-      `🧠 NEW TASK\nID: ${execId}\nUSER: ${message.author.tag}\n\nTASK:\n${task}\n\nCODE:\n${code}`,
+      `🧠 NEW TASK\nID: ${execId}\nUSER: ${message.author.tag}\n\nTASK:\n${task}\n\nCODE:\n${code}`
     );
   } catch (err) {
     console.error(err);
@@ -156,7 +169,7 @@ export async function handleDoButtons(client, interaction, PREFIX) {
       await interaction.deferUpdate().catch(() => {});
 
       const AsyncFunction = Object.getPrototypeOf(
-        async function () {},
+        async function () {}
       ).constructor;
 
       const fn = new AsyncFunction(
@@ -173,7 +186,7 @@ const module = undefined;
 const exports = undefined;
 
 ${code}
-`,
+`
       );
 
       const message = await interaction.channel.messages.fetch(messageId);
@@ -184,16 +197,14 @@ ${code}
 
       const time = Date.now() - start;
 
-      await interaction
-        .editReply({
-          content: `✅ Executed (${time}ms)`,
-          components: [],
-        })
-        .catch(() => {});
+      await interaction.editReply({
+        content: `✅ Executed (${time}ms)`,
+        components: [],
+      }).catch(() => {});
 
       await logToSupport(
         client,
-        `✅ SUCCESS\nID: ${execId}\nUSER: ${interaction.user.tag}\nTIME: ${time}ms\n\nTASK:\n${task}`,
+        `✅ SUCCESS\nID: ${execId}\nUSER: ${interaction.user.tag}\nTIME: ${time}ms\n\nTASK:\n${task}`
       );
     } catch (err) {
       console.error(err);
@@ -207,7 +218,7 @@ ${code}
 
       await logToSupport(
         client,
-        `❌ FAILURE\nID: ${execId}\nUSER: ${interaction.user.tag}\n\nTASK:\n${task}\n\nERROR:\n${err.stack}\n\nCODE:\n${code}`,
+        `❌ FAILURE\nID: ${execId}\nUSER: ${interaction.user.tag}\n\nTASK:\n${task}\n\nERROR:\n${err.stack}\n\nCODE:\n${code}`
       );
     }
   }

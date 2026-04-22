@@ -1,9 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
+import fetch from "node-fetch";
+import zlib from "zlib";
 import { reportError } from "./reportError.js";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
 
 function splitMessage(text, maxLength = 2000) {
   const parts = text.split(/(?=^#{1,3}\s)/gm);
@@ -14,7 +11,7 @@ function splitMessage(text, maxLength = 2000) {
   for (const part of parts) {
     if ((current + part).length > maxLength) {
       if (current) chunks.push(current.trim());
-
+      // If part itself is too long, split by lines
       if (part.length > maxLength) {
         const lines = part.split("\n");
         let temp = "";
@@ -44,23 +41,51 @@ export async function searchText(client, message, text) {
   try {
     const searchingReaction = await message.react("⏳");
 
-    // 🤖 Gemini call
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: `You are a helpful assistant.
-Answer the user's query clearly and concisely.
-If needed, format the response using headings (#, ##, ###) for readability.
-
-Query:
-${text}`,
-      config: {
-        temperature: 0.4,
+    const response = await fetch(process.env.N8N_SEARCH_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.N8N_AUTH_HEADER,
       },
+      body: JSON.stringify({ query: text }),
     });
 
-    let finalResult = response.text?.replace(/```/g, "").trim();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    if (!finalResult) throw new Error("Empty Gemini response");
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const encoding = response.headers.get("content-encoding");
+    let textResponse;
+
+    try {
+      switch (encoding) {
+        case "br":
+          textResponse = zlib.brotliDecompressSync(buffer).toString("utf-8");
+          break;
+        case "gzip":
+          textResponse = zlib.gunzipSync(buffer).toString("utf-8");
+          break;
+        case "deflate":
+          textResponse = zlib.inflateSync(buffer).toString("utf-8");
+          break;
+        default:
+          textResponse = buffer.toString("utf-8");
+      }
+    } catch {
+      textResponse = buffer.toString("utf-8");
+    }
+
+    if (!textResponse.trim()) throw new Error("Empty response from webhook");
+
+    // Parse JSON and get final_result
+    let finalResult;
+    try {
+      const json = JSON.parse(textResponse);
+      finalResult = json.final_result?.toString().trim();
+    } catch {
+      throw new Error("Invalid JSON from webhook");
+    }
+
+    if (!finalResult) throw new Error("final_result is empty");
 
     // Split long text and send each chunk
     const messages = splitMessage(finalResult, 2000);
@@ -81,5 +106,4 @@ ${text}`,
     );
   }
 }
-
 export { splitMessage };

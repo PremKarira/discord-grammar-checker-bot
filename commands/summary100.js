@@ -1,14 +1,15 @@
-import fetch from "node-fetch";
-import zlib from "zlib";
+import { GoogleGenAI } from "@google/genai";
 import { splitMessage } from "../utils/search.js";
-
 import { reportError } from "../utils/reportError.js";
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
 async function fetchMessages(channel, count) {
   let messages = [];
   let lastId = null;
 
-  // send initial progress message
   const progressMsg = await channel.send(
     `📥 Fetching messages... 0 / ${count}`,
   );
@@ -26,7 +27,6 @@ async function fetchMessages(channel, count) {
     messages.push(...fetched.values());
     lastId = fetched.last().id;
 
-    // update progress
     await progressMsg.edit(
       `📥 Fetching messages... ${messages.length} / ${count}`,
     );
@@ -41,67 +41,26 @@ export async function summary100Command(message, count) {
   try {
     const reaction = await message.react("⏳");
 
-    // 1️⃣ Fetch last N messages
-    // const fetched = await message.channel.messages.fetch({ limit: count });
-
-    // const msgs = [...fetched.values()]
-    //   .reverse()
-    //   .map((m) => `**${m.author.username}:** ${m.content || "(no text)"}`)
-    //   .join("\n");
+    // 1️⃣ Fetch messages
     const msgs = (await fetchMessages(message.channel, count))
       .reverse()
       .map((m) => `**${m.author.username}:** ${m.content || "(no text)"}`)
       .join("\n");
 
-    // 2️⃣ Send to n8n
-    const response = await fetch(process.env.N8N_SEARCH_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.N8N_AUTH_HEADER,
+    // 2️⃣ Gemini summarization
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite-preview",
+      contents: `Summarize the following Discord conversation in a clean, short, and structured way:\n\n${msgs}`,
+      config: {
+        temperature: 0.3,
       },
-      body: JSON.stringify({
-        query: msgs,
-        mode: "summary",
-      }),
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    let finalResult = response.text?.replace(/```/g, "").trim();
 
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const encoding = response.headers.get("content-encoding");
+    if (!finalResult) throw new Error("Empty Gemini response");
 
-    let textResponse;
-    try {
-      switch (encoding) {
-        case "br":
-          textResponse = zlib.brotliDecompressSync(buffer).toString("utf-8");
-          break;
-        case "gzip":
-          textResponse = zlib.gunzipSync(buffer).toString("utf-8");
-          break;
-        case "deflate":
-          textResponse = zlib.inflateSync(buffer).toString("utf-8");
-          break;
-        default:
-          textResponse = buffer.toString("utf-8");
-      }
-    } catch {
-      textResponse = buffer.toString("utf-8");
-    }
-
-    // 3️⃣ Parse JSON from n8n
-    let finalResult;
-    try {
-      const json = JSON.parse(textResponse);
-      finalResult = json.final_result?.trim();
-    } catch {
-      throw new Error("Invalid JSON from webhook");
-    }
-
-    if (!finalResult) throw new Error("Webhook final_result empty");
-
-    // 4️⃣ Split & reply
+    // 3️⃣ Split & reply
     const chunks = splitMessage(finalResult, 2000);
 
     for (const c of chunks) {

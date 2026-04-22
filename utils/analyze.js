@@ -1,6 +1,9 @@
-import fetch from "node-fetch";
-import zlib from "zlib";
+import { GoogleGenAI } from "@google/genai";
 import { reportError } from "./reportError.js";
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
 const RATE_LIMIT_MS = 2000;
 const lastCall = new Map();
@@ -19,69 +22,37 @@ export async function analyzeText(client, message, text, isTest) {
     const sanitizedText = text.replace(/\s+/g, " ").trim();
     const analyzingReaction = await message.react("⏳");
 
-    // 🌐 Send to n8n webhook
-    const response = await fetch(process.env.N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.N8N_AUTH_HEADER,
-      },
-      body: JSON.stringify({
-        text_to_analyze: sanitizedText,
-        mode: `You are a grammar correction assistant.
+    // 🤖 Gemini call
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite-preview",
+      contents: `You are a grammar correction assistant.
 Check if this sentence is grammatically correct (ignore punctuation mistakes).
+
 If correct, respond in two lines:
-1st line: "good"
-2nd line: repeat the same sentence.
+good
+<same sentence>
 
 If incorrect, respond in two lines:
-1st line: "bad"
-2nd line: corrected version.
-No explanations or extra words.`,
-      }),
+bad
+<corrected sentence>
+
+Sentence:
+${sanitizedText}`,
+      config: {
+        temperature: 0.2,
+      },
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    let raw = response.text?.replace(/```/g, "").trim();
 
-    // 📦 Handle possible compression
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const encoding = response.headers.get("content-encoding");
-    console.log("Content-Encoding:", encoding);
-    let textResponse;
-    try {
-      switch (encoding) {
-        case "br":
-          textResponse = zlib.brotliDecompressSync(buffer).toString("utf-8");
-          break;
-        case "gzip":
-          textResponse = zlib.gunzipSync(buffer).toString("utf-8");
-          break;
-        case "deflate":
-          textResponse = zlib.inflateSync(buffer).toString("utf-8");
-          break;
-        default:
-          textResponse = buffer.toString("utf-8");
-      }
-    } catch {
-      textResponse = buffer.toString("utf-8");
-    }
-
-    if (!textResponse?.trim()) throw new Error("Empty response from webhook");
-
-    // 🧠 Parse JSON or text output
-    let raw = textResponse.replace(/```/g, "").trim();
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.final_result) raw = parsed.final_result;
-    } catch {
-      // not JSON, continue as plain text
-    }
+    if (!raw) throw new Error("Empty Gemini response");
 
     // 📋 Split lines (expecting two-line format)
     const [statusLine, ...rest] = raw
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
+
     const status = statusLine?.toLowerCase();
     const corrected = rest.join(" ");
 
@@ -101,7 +72,6 @@ No explanations or extra words.`,
       await analyzingReaction.remove();
     } catch {}
   } catch (err) {
-    // 🧾 Error reporting
     const guildId = message.guild?.id || "@me";
     const messageLink = `https://discord.com/channels/${guildId}/${message.channel.id}/${message.id}`;
     await reportError(

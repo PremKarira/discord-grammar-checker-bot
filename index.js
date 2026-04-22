@@ -78,7 +78,7 @@ botStatus.forwardingEnabled = savedStatus.forwardingEnabled;
 
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  startN8nStatusMonitor(client, isBotActive, botStatus);
+  // startN8nStatusMonitor(client, isBotActive, botStatus);
   // await setupVoiceOnReady(client, "Client 1");
 
   setupErrorHandler(client, logToSupport);

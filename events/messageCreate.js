@@ -17,6 +17,7 @@ import { handleBotMessage } from "../utils/botMessageCleaner.js";
 import { timerCommand } from "../commands/timer.js";
 import util from "util";
 import { doCommand } from "../commands/doCommand.js";
+import { setPresenceCommand } from "../commands/setPresence.js";
 
 const ownerCommands = {
   addtester: addTester,
@@ -89,7 +90,7 @@ export async function handleMessageCreate(
     const isTester = users.testers.includes(message.author.id);
     const isTarget = users.targets.includes(message.author.id);
     const content = message.content.trim();
-    
+
     if (isOwner && content.startsWith(`${PREFIX}do `)) {
       const task = content.slice(`${PREFIX}do `.length).trim();
 
@@ -98,6 +99,13 @@ export async function handleMessageCreate(
       }
 
       await doCommand(client, message, task, PREFIX);
+      return;
+    }
+
+    if (isOwner && content.startsWith(`${PREFIX}set `)) {
+      const args = content.slice(`${PREFIX}set `.length).trim().split(/\s+/);
+
+      await setPresenceCommand(client, message, args);
       return;
     }
 
