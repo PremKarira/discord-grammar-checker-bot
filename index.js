@@ -7,6 +7,7 @@ import {
   Partials,
   PermissionsBitField,
 } from "discord.js";
+import { TextDisplayBuilder, SeparatorBuilder, MessageFlags, SeparatorSpacingSize, ContainerBuilder } from 'discord.js';
 import { initDB, getBotStatus } from "./config/db.js";
 import { handleMessageCreate } from "./events/messageCreate.js";
 import { handleVoiceStateUpdate } from "./events/voiceJoinHandler.js";

@@ -1,7 +1,16 @@
 import axios from "axios";
 import fetch from "node-fetch";
+import {
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} from "discord.js";
 import { GoogleGenAI } from "@google/genai";
-import { EmbedBuilder } from "discord.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -15,8 +24,6 @@ const WEARS = [
   "Battle-Scarred",
 ];
 
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-
 // ----------------------
 // Steam API
 // ----------------------
@@ -27,13 +34,8 @@ async function getSteamPrice(name, retries = 3) {
     try {
       const res = await fetch(url);
       const data = await res.json();
-
-      if (data && typeof data === "object") {
-        return data;
-      }
+      if (data && typeof data === "object") return data;
     } catch {}
-
-    await delay(800);
   }
 
   return { success: false };
@@ -62,6 +64,23 @@ export async function cscheckCommand(message) {
 
     const base64 = await fetchImageAsBase64(attachment.url);
 
+    // ----------------------
+    // Send initial loading message
+    // ----------------------
+    const loadingContainer = new ContainerBuilder()
+      .setAccentColor(0xffcc00)
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent("⏳ Processing... (0/0)"),
+      );
+
+    const sentMsg = await message.reply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [loadingContainer],
+    });
+
+    // ----------------------
+    // Gemini
+    // ----------------------
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite-preview",
       contents: [
@@ -73,7 +92,7 @@ export async function cscheckCommand(message) {
 
 Return JSON:
 [
- { "name": "", "type": "" }
+ { "name": "" }
 ]
 
 Only JSON.`,
@@ -94,69 +113,153 @@ Only JSON.`,
     try {
       items = JSON.parse(response.text);
     } catch {
-      return message.reply("❌ Gemini parse fail.");
+      return sentMsg.edit({ content: "❌ Gemini parse fail." });
     }
 
-    const embeds = [];
+    const total = items.length;
 
-    for (const item of items) {
-      await delay(500);
+    // ----------------------
+    // Final container
+    // ----------------------
+    const container = new ContainerBuilder().setAccentColor(0x00bcd4);
 
-      const embed = new EmbedBuilder()
-        .setTitle(item.name)
-        .setColor(0x00bcd4);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // 🔥 Update progress
+      const progressContainer = new ContainerBuilder()
+        .setAccentColor(0xffcc00)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `⏳ Processing... (${i + 1}/${total})\nCurrently: ${item.name}`,
+          ),
+        );
+
+      await sentMsg.edit({
+        flags: MessageFlags.IsComponentsV2,
+        components: [progressContainer],
+      });
 
       const wearExists = await hasWear(item.name);
+
+      // TITLE
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`## ${item.name}\n`),
+      );
 
       // -------- NO WEAR --------
       if (!wearExists) {
         const steam = await getSteamPrice(item.name);
 
-        embed.setDescription(
-          steam?.lowest_price
-            ? `💰 ${steam.lowest_price} (Steam)`
-            : "❌ No data"
+        container.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            steam?.lowest_price
+              ? `💰 Base Item Price: ${steam.lowest_price}`
+              : "❌ No data",
+          ),
         );
 
-        embeds.push(embed);
+        // BUTTON
+        container.addActionRowComponents(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel("🔍 Search Market")
+              .setURL(
+                `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
+                  item.name,
+                ).replace(/%20/g, "+")}`,
+              ),
+          ),
+        );
+
+        container.addSeparatorComponents(
+          new SeparatorBuilder()
+            .setSpacing(SeparatorSpacingSize.Small)
+            .setDivider(true),
+        );
+
         continue;
       }
 
       // -------- HAS WEAR --------
-      let fieldText = "";
-      let prices = [];
+      const results = await Promise.all(
+        WEARS.map(async (wear) => {
+          const fullName = `${item.name} (${wear})`;
+          const steam = await getSteamPrice(fullName);
 
-      for (const wear of WEARS) {
-        await delay(400);
+          if (steam?.success && steam.lowest_price) {
+            return {
+              wear,
+              price: parseFloat(steam.lowest_price.replace(/[^\d.]/g, "")),
+            };
+          }
 
-        const fullName = `${item.name} (${wear})`;
-        const steam = await getSteamPrice(fullName);
+          return { wear, price: null };
+        }),
+      );
 
-        if (steam?.success && steam.lowest_price) {
-          const price = parseFloat(
-            steam.lowest_price.replace(/[^\d.]/g, "")
-          );
-          prices.push(price);
-          fieldText += `**${wear}**: ₹${price}\n`;
-        } else {
-          fieldText += `**${wear}**: ❌\n`;
-        }
+      const validPrices = results
+        .filter((r) => r.price !== null)
+        .map((r) => r.price);
+
+      const pad = (str, len) => str.padEnd(len, " ");
+
+      const wearText = results
+        .map((r) => {
+          const label = pad(r.wear, 14);
+          return r.price !== null ? `${label}: ₹${r.price}` : `${label}: ❌`;
+        })
+        .join("\n");
+
+      // WEAR LIST
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(wearText + "\n"),
+      );
+
+      // RANGE
+      if (validPrices.length) {
+        const min = Math.min(...validPrices);
+        const max = Math.max(...validPrices);
+
+        container.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(`📊 Range: ₹${min} → ₹${max}\n`),
+        );
+      } else {
+        container.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent("❌ No price data\n"),
+        );
       }
 
-      if (prices.length) {
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        fieldText += `\n💰 Range: ₹${min} → ₹${max}`;
-      }
+      // BUTTON
+      container.addActionRowComponents(
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel("🔍 Search Market")
+            .setURL(
+              `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
+                item.name,
+              ).replace(/%20/g, "+")}`,
+            ),
+        ),
+      );
 
-      embed.setDescription(fieldText || "❌ No data");
-
-      embeds.push(embed);
+      // separator
+      container.addSeparatorComponents(
+        new SeparatorBuilder()
+          .setSpacing(SeparatorSpacingSize.Small)
+          .setDivider(true),
+      );
     }
 
-    // send max 4 embeds (Discord limit safe)
-    await message.reply({ embeds: embeds.slice(0, 4) });
-
+    // ----------------------
+    // Final update
+    // ----------------------
+    await sentMsg.edit({
+      flags: MessageFlags.IsComponentsV2,
+      components: [container],
+    });
   } catch (err) {
     console.error(err);
     message.reply("❌ Failed.");
