@@ -62,7 +62,6 @@ export async function cscheckCommand(message) {
 
     const base64 = await fetchImageAsBase64(attachment.url);
 
-    // Gemini
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite-preview",
       contents: [
@@ -90,7 +89,7 @@ Only JSON.`,
       ],
       config: { temperature: 0.1 },
     });
-    
+
     let items;
     try {
       items = JSON.parse(response.text);
@@ -98,12 +97,14 @@ Only JSON.`,
       return message.reply("❌ Gemini parse fail.");
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle("🎯 CS Weekly Drop Analysis")
-      .setColor(0x00bcd4);
+    const embeds = [];
 
     for (const item of items) {
       await delay(500);
+
+      const embed = new EmbedBuilder()
+        .setTitle(item.name)
+        .setColor(0x00bcd4);
 
       const wearExists = await hasWear(item.name);
 
@@ -111,13 +112,13 @@ Only JSON.`,
       if (!wearExists) {
         const steam = await getSteamPrice(item.name);
 
-        embed.addFields({
-          name: item.name,
-          value: steam?.lowest_price
-            ? `💰 ${steam.lowest_price}`
-            : "❌ No data",
-        });
+        embed.setDescription(
+          steam?.lowest_price
+            ? `💰 ${steam.lowest_price} (Steam)`
+            : "❌ No data"
+        );
 
+        embeds.push(embed);
         continue;
       }
 
@@ -148,13 +149,14 @@ Only JSON.`,
         fieldText += `\n💰 Range: ₹${min} → ₹${max}`;
       }
 
-      embed.addFields({
-        name: item.name,
-        value: fieldText || "❌ No data",
-      });
+      embed.setDescription(fieldText || "❌ No data");
+
+      embeds.push(embed);
     }
 
-    await message.reply({ embeds: [embed] });
+    // send max 4 embeds (Discord limit safe)
+    await message.reply({ embeds: embeds.slice(0, 4) });
+
   } catch (err) {
     console.error(err);
     message.reply("❌ Failed.");
