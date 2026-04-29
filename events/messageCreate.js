@@ -18,6 +18,7 @@ import { timerCommand } from "../commands/timer.js";
 import util from "util";
 import { doCommand } from "../commands/doCommand.js";
 import { setPresenceCommand } from "../commands/setPresence.js";
+import { cscheckCommand } from "../commands/cscheck.js";
 
 const ownerCommands = {
   addtester: addTester,
@@ -384,6 +385,11 @@ export async function handleMessageCreate(
     if (content.startsWith(`${PREFIX}timer `)) {
       const input = content.slice(`${PREFIX}timer `.length).trim();
       await timerCommand(message, input);
+      return;
+    }
+
+    if (content === `${PREFIX}cscheck`) {
+      await cscheckCommand(message);
       return;
     }
 
