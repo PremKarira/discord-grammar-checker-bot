@@ -387,9 +387,10 @@ export async function handleMessageCreate(
       await timerCommand(message, input);
       return;
     }
+    if (content.startsWith(`${PREFIX}cscheck`)) {
+      const args = content.split(" ").slice(1);
 
-    if (content === `${PREFIX}cscheck`) {
-      await cscheckCommand(message);
+      await cscheckCommand(message, args);
       return;
     }
 

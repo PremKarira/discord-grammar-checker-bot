@@ -52,17 +52,56 @@ async function hasWear(name) {
 // ----------------------
 // Command
 // ----------------------
-export async function cscheckCommand(message) {
+export async function cscheckCommand(message, args = []) {
   try {
-    if (!message.reference) {
-      return message.reply("❌ Reply to weekly drop image.");
+    let imageUrl = null;
+
+    // ----------------------
+    // 1. Reply image support
+    // ----------------------
+    if (message.reference) {
+      const repliedMsg = await message.fetchReference();
+      const attachment = repliedMsg.attachments.first();
+
+      if (attachment) {
+        imageUrl = attachment.url;
+      }
     }
 
-    const repliedMsg = await message.fetchReference();
-    const attachment = repliedMsg.attachments.first();
-    if (!attachment) return message.reply("❌ No image.");
+    // ----------------------
+    // 2. Same message attachment
+    // !cscheck + uploaded image
+    // ----------------------
+    if (!imageUrl) {
+      const attachment = message.attachments.first();
 
-    const base64 = await fetchImageAsBase64(attachment.url);
+      if (attachment) {
+        imageUrl = attachment.url;
+      }
+    }
+
+    // ----------------------
+    // 3. Direct URL support
+    // !cscheck https://...
+    // ----------------------
+    if (!imageUrl && args.length > 0) {
+      const possibleUrl = args[0];
+
+      if (
+        possibleUrl.startsWith("http://") ||
+        possibleUrl.startsWith("https://")
+      ) {
+        imageUrl = possibleUrl;
+      }
+    }
+
+    if (!imageUrl) {
+      return message.reply(
+        "❌ Reply to image, attach image, or use:\n`!cscheck <image_url>`",
+      );
+    }
+
+    const base64 = await fetchImageAsBase64(imageUrl);
 
     // ----------------------
     // Send initial loading message
@@ -126,7 +165,6 @@ Only JSON.`,
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      // 🔥 Update progress
       const progressContainer = new ContainerBuilder()
         .setAccentColor(0xffcc00)
         .addTextDisplayComponents(
@@ -142,12 +180,10 @@ Only JSON.`,
 
       const wearExists = await hasWear(item.name);
 
-      // TITLE
       container.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(`## ${item.name}\n`),
       );
 
-      // -------- NO WEAR --------
       if (!wearExists) {
         const steam = await getSteamPrice(item.name);
 
@@ -159,7 +195,6 @@ Only JSON.`,
           ),
         );
 
-        // BUTTON
         container.addActionRowComponents(
           new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -182,7 +217,6 @@ Only JSON.`,
         continue;
       }
 
-      // -------- HAS WEAR --------
       const results = await Promise.all(
         WEARS.map(async (wear) => {
           const fullName = `${item.name} (${wear})`;
@@ -212,12 +246,10 @@ Only JSON.`,
         })
         .join("\n");
 
-      // WEAR LIST
       container.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(wearText + "\n"),
       );
 
-      // RANGE
       if (validPrices.length) {
         const min = Math.min(...validPrices);
         const max = Math.max(...validPrices);
@@ -231,7 +263,6 @@ Only JSON.`,
         );
       }
 
-      // BUTTON
       container.addActionRowComponents(
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -245,7 +276,6 @@ Only JSON.`,
         ),
       );
 
-      // separator
       container.addSeparatorComponents(
         new SeparatorBuilder()
           .setSpacing(SeparatorSpacingSize.Small)
@@ -253,9 +283,6 @@ Only JSON.`,
       );
     }
 
-    // ----------------------
-    // Final update
-    // ----------------------
     await sentMsg.edit({
       flags: MessageFlags.IsComponentsV2,
       components: [container],
