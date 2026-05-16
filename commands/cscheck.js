@@ -30,23 +30,164 @@ const WEARS = [
 async function getSteamPrice(name, retries = 3) {
   const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=24&market_hash_name=${encodeURIComponent(name)}`;
 
+  console.log("Fetching Steam price:", name);
+
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url);
       const data = await res.json();
-      if (data && typeof data === "object") return data;
-    } catch {}
+
+      if (data && typeof data === "object") {
+        return data;
+      }
+    } catch (err) {
+      console.log("Steam fetch retry:", i + 1);
+    }
   }
 
   return { success: false };
 }
 
 // ----------------------
-// Detect wear
+// Detect wear support
 // ----------------------
 async function hasWear(name) {
   const test = await getSteamPrice(`${name} (Factory New)`);
-  return test?.volume;
+
+  return (
+    test?.success && (test?.lowest_price || test?.median_price || test?.volume)
+  );
+}
+
+// ----------------------
+// Fetch image -> base64
+// ----------------------
+async function fetchImageAsBase64(url) {
+  const res = await axios.get(url, {
+    responseType: "arraybuffer",
+  });
+
+  return Buffer.from(res.data).toString("base64");
+}
+
+// ----------------------
+// Render skin prices
+// ----------------------
+async function buildSkinContainer(itemName) {
+  const container = new ContainerBuilder().setAccentColor(0x00bcd4);
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`## ${itemName}\n`),
+  );
+
+  const wearExists = await hasWear(itemName);
+
+  // ----------------------
+  // No wears
+  // ----------------------
+  if (!wearExists) {
+    const steam = await getSteamPrice(itemName);
+
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        steam?.lowest_price
+          ? `💰 Base Item Price: ${steam.lowest_price}`
+          : "❌ No market data",
+      ),
+    );
+
+    container.addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("🔍 Search Market")
+          .setURL(
+            `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
+              itemName.replace(/\s*\([^)]*\)\s*$/, ""),
+            ).replace(/%20/g, "+")}`,
+          ),
+      ),
+    );
+
+    return container;
+  }
+
+  // ----------------------
+  // Wears
+  // ----------------------
+  const results = await Promise.all(
+    WEARS.map(async (wear) => {
+      const fullName = `${itemName} (${wear})`;
+
+      const steam = await getSteamPrice(fullName);
+
+      if (steam?.success && steam?.lowest_price) {
+        return {
+          wear,
+          rawPrice: steam.lowest_price,
+          price: parseFloat(steam.lowest_price.replace(/[^\d.]/g, "")),
+        };
+      }
+
+      return {
+        wear,
+        rawPrice: null,
+        price: null,
+      };
+    }),
+  );
+
+  const validPrices = results
+    .filter((r) => r.price !== null)
+    .map((r) => r.price);
+
+  const pad = (str, len) => str.padEnd(len, " ");
+
+  const wearText = results
+    .map((r) => {
+      const label = pad(r.wear, 14);
+
+      return r.rawPrice ? `${label}: ${r.rawPrice}` : `${label}: ❌`;
+    })
+    .join("\n");
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("```" + wearText + "```"),
+  );
+
+  if (validPrices.length) {
+    const min = Math.min(...validPrices);
+    const max = Math.max(...validPrices);
+
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`📊 Range: ₹${min} → ₹${max}`),
+    );
+  } else {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent("❌ No valid price data"),
+    );
+  }
+
+  container.addActionRowComponents(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel("🔍 Search Market")
+        .setURL(
+          `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
+            itemName,
+          ).replace(/%20/g, "+")}`,
+        ),
+    ),
+  );
+
+  container.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(true),
+  );
+
+  return container;
 }
 
 // ----------------------
@@ -55,22 +196,25 @@ async function hasWear(name) {
 export async function cscheckCommand(message, args = []) {
   try {
     let imageUrl = null;
+    let directSkinName = null;
 
     // ----------------------
-    // 1. Reply image support
+    // Reply image support
     // ----------------------
     if (message.reference) {
-      const repliedMsg = await message.fetchReference();
-      const attachment = repliedMsg.attachments.first();
+      try {
+        const repliedMsg = await message.fetchReference();
 
-      if (attachment) {
-        imageUrl = attachment.url;
-      }
+        const attachment = repliedMsg.attachments.first();
+
+        if (attachment) {
+          imageUrl = attachment.url;
+        }
+      } catch {}
     }
 
     // ----------------------
-    // 2. Same message attachment
-    // !cscheck + uploaded image
+    // Same message attachment
     // ----------------------
     if (!imageUrl) {
       const attachment = message.attachments.first();
@@ -81,35 +225,62 @@ export async function cscheckCommand(message, args = []) {
     }
 
     // ----------------------
-    // 3. Direct URL support
-    // !cscheck https://...
+    // URL OR skin name
     // ----------------------
     if (!imageUrl && args.length > 0) {
-      const possibleUrl = args[0];
+      const input = args.join(" ").trim();
 
-      if (
-        possibleUrl.startsWith("http://") ||
-        possibleUrl.startsWith("https://")
-      ) {
-        imageUrl = possibleUrl;
+      if (input.startsWith("http://") || input.startsWith("https://")) {
+        imageUrl = input;
+      } else {
+        directSkinName = input;
       }
     }
 
-    if (!imageUrl) {
+    // ----------------------
+    // No input
+    // ----------------------
+    if (!imageUrl && !directSkinName) {
       return message.reply(
-        "❌ Reply to image, attach image, or use:\n`!cscheck <image_url>`",
+        "❌ Reply to image, attach image, use image URL, or:\n`!cscheck AK-47 | Redline`",
       );
     }
 
+    // =====================================================
+    // DIRECT SKIN MODE
+    // =====================================================
+    if (directSkinName) {
+      const loadingContainer = new ContainerBuilder()
+        .setAccentColor(0xffcc00)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `⏳ Checking market...\n## ${directSkinName}`,
+          ),
+        );
+
+      const sentMsg = await message.reply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [loadingContainer],
+      });
+
+      const container = await buildSkinContainer(directSkinName);
+
+      return sentMsg.edit({
+        flags: MessageFlags.IsComponentsV2,
+        components: [container],
+      });
+    }
+
+    // =====================================================
+    // IMAGE MODE
+    // =====================================================
+
     const base64 = await fetchImageAsBase64(imageUrl);
 
-    // ----------------------
-    // Send initial loading message
-    // ----------------------
     const loadingContainer = new ContainerBuilder()
       .setAccentColor(0xffcc00)
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("⏳ Processing... (0/0)"),
+        new TextDisplayBuilder().setContent("⏳ Processing image..."),
       );
 
     const sentMsg = await message.reply({
@@ -118,7 +289,7 @@ export async function cscheckCommand(message, args = []) {
     });
 
     // ----------------------
-    // Gemini
+    // Gemini Vision
     // ----------------------
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite-preview",
@@ -127,13 +298,19 @@ export async function cscheckCommand(message, args = []) {
           role: "user",
           parts: [
             {
-              text: `Analyze CS2 weekly drop image.
+              text: `Analyze this CS2 weekly drop screenshot.
 
-Return JSON:
+Return ONLY valid JSON.
+
+Format:
 [
- { "name": "" }
+  {
+    "name": "AK-47 | Redline"
+  }
 ]
 
+No markdown.
+No explanation.
 Only JSON.`,
             },
             {
@@ -145,23 +322,34 @@ Only JSON.`,
           ],
         },
       ],
-      config: { temperature: 0.1 },
+      config: {
+        temperature: 0.1,
+      },
     });
 
     let items;
+
     try {
       items = JSON.parse(response.text);
-    } catch {
-      return sentMsg.edit({ content: "❌ Gemini parse fail." });
+    } catch (err) {
+      console.log(response.text);
+
+      return sentMsg.edit({
+        content: "❌ Gemini JSON parse failed.",
+      });
     }
 
-    const total = items.length;
+    if (!Array.isArray(items) || !items.length) {
+      return sentMsg.edit({
+        content: "❌ No items detected.",
+      });
+    }
+
+    const finalContainer = new ContainerBuilder().setAccentColor(0x00bcd4);
 
     // ----------------------
-    // Final container
+    // Process each item
     // ----------------------
-    const container = new ContainerBuilder().setAccentColor(0x00bcd4);
-
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
@@ -169,7 +357,7 @@ Only JSON.`,
         .setAccentColor(0xffcc00)
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `⏳ Processing... (${i + 1}/${total})\nCurrently: ${item.name}`,
+            `⏳ Processing (${i + 1}/${items.length})\n## ${item.name}`,
           ),
         );
 
@@ -178,125 +366,22 @@ Only JSON.`,
         components: [progressContainer],
       });
 
-      const wearExists = await hasWear(item.name);
+      const built = await buildSkinContainer(item.name);
 
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`## ${item.name}\n`),
-      );
-
-      if (!wearExists) {
-        const steam = await getSteamPrice(item.name);
-
-        container.addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(
-            steam?.lowest_price
-              ? `💰 Base Item Price: ${steam.lowest_price}`
-              : "❌ No data",
-          ),
-        );
-
-        container.addActionRowComponents(
-          new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-              .setStyle(ButtonStyle.Link)
-              .setLabel("🔍 Search Market")
-              .setURL(
-                `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
-                  item.name,
-                ).replace(/%20/g, "+")}`,
-              ),
-          ),
-        );
-
-        container.addSeparatorComponents(
-          new SeparatorBuilder()
-            .setSpacing(SeparatorSpacingSize.Small)
-            .setDivider(true),
-        );
-
-        continue;
-      }
-
-      const results = await Promise.all(
-        WEARS.map(async (wear) => {
-          const fullName = `${item.name} (${wear})`;
-          const steam = await getSteamPrice(fullName);
-
-          if (steam?.success && steam.lowest_price) {
-            return {
-              wear,
-              price: parseFloat(steam.lowest_price.replace(/[^\d.]/g, "")),
-            };
-          }
-
-          return { wear, price: null };
-        }),
-      );
-
-      const validPrices = results
-        .filter((r) => r.price !== null)
-        .map((r) => r.price);
-
-      const pad = (str, len) => str.padEnd(len, " ");
-
-      const wearText = results
-        .map((r) => {
-          const label = pad(r.wear, 14);
-          return r.price !== null ? `${label}: ₹${r.price}` : `${label}: ❌`;
-        })
-        .join("\n");
-
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(wearText + "\n"),
-      );
-
-      if (validPrices.length) {
-        const min = Math.min(...validPrices);
-        const max = Math.max(...validPrices);
-
-        container.addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(`📊 Range: ₹${min} → ₹${max}\n`),
-        );
-      } else {
-        container.addTextDisplayComponents(
-          new TextDisplayBuilder().setContent("❌ No price data\n"),
-        );
-      }
-
-      container.addActionRowComponents(
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel("🔍 Search Market")
-            .setURL(
-              `https://steamcommunity.com/market/search?appid=730&q=${encodeURIComponent(
-                item.name,
-              ).replace(/%20/g, "+")}`,
-            ),
-        ),
-      );
-
-      container.addSeparatorComponents(
-        new SeparatorBuilder()
-          .setSpacing(SeparatorSpacingSize.Small)
-          .setDivider(true),
-      );
+      // merge components
+      finalContainer.components.push(...built.components);
     }
 
+    // ----------------------
+    // Final edit
+    // ----------------------
     await sentMsg.edit({
       flags: MessageFlags.IsComponentsV2,
-      components: [container],
+      components: [finalContainer],
     });
   } catch (err) {
     console.error(err);
-    message.reply("❌ Failed.");
-  }
-}
 
-// ----------------------
-// Image fetch
-// ----------------------
-async function fetchImageAsBase64(url) {
-  const res = await axios.get(url, { responseType: "arraybuffer" });
-  return Buffer.from(res.data).toString("base64");
+    return message.reply("❌ Failed.");
+  }
 }
