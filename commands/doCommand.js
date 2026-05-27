@@ -7,6 +7,7 @@ import {
   AttachmentBuilder,
 } from "discord.js";
 import { GoogleGenAI } from "@google/genai";
+import { MODELS } from "../config/models.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -57,7 +58,7 @@ export async function doCommand(client, message, task, PREFIX) {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: MODELS.MAIN,
       config: {
         temperature: 0.2,
         systemInstruction: `

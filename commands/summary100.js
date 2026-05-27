@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { splitMessage } from "../utils/search.js";
 import { reportError } from "../utils/reportError.js";
+import { MODELS } from "../config/models.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -49,7 +50,7 @@ export async function summary100Command(message, count) {
 
     // 2️⃣ Gemini summarization
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: MODELS.MAIN,
       contents: `Summarize the following Discord conversation in a clean, short, and structured way:\n\n${msgs}`,
       config: {
         temperature: 0.3,

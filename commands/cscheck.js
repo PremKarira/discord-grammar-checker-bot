@@ -11,6 +11,7 @@ import {
   MessageFlags,
 } from "discord.js";
 import { GoogleGenAI } from "@google/genai";
+import { MODELS } from "../config/models.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -292,7 +293,7 @@ export async function cscheckCommand(message, args = []) {
     // Gemini Vision
     // ----------------------
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: MODELS.MAIN,
       contents: [
         {
           role: "user",

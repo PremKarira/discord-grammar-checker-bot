@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { reportError } from "./reportError.js";
+import { MODELS } from "../config/models.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -24,7 +25,7 @@ export async function analyzeText(client, message, text, isTest) {
 
     // 🤖 Gemini call
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: MODELS.MAIN,
       contents: `You are a grammar correction assistant.
 Check if this sentence is grammatically correct (ignore punctuation mistakes).
 

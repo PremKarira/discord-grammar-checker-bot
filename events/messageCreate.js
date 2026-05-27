@@ -133,12 +133,24 @@ export async function handleMessageCreate(
           const args = code.split(/\s+/);
 
           // ✅ handle -a flag
+          // ✅ handle -a flag
           if (args.includes("-a")) {
-            const mention = message.mentions.users.first();
+            const aIndex = args.indexOf("-a");
 
-            if (!mention) {
+            const mentionArg = args[aIndex + 1];
+
+            if (!mentionArg) {
               return message.reply("❌ Mention a user with -a");
             }
+
+            const userId = mentionArg.replace(/[<@!>]/g, "");
+
+            const mention = await client.users.fetch(userId).catch(() => null);
+
+            if (!mention) {
+              return message.reply("❌ Invalid user mention");
+            }
+
             repliedMsg.author = mention;
           }
           client.emit("messageCreate", repliedMsg);

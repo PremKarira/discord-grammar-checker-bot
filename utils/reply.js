@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { reportError } from "./reportError.js";
+import { MODELS } from "../config/models.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -8,7 +9,7 @@ const ai = new GoogleGenAI({
 export async function handleReplyMessage(client, message, text) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: MODELS.MAIN,
       contents: `You are a friendly and concise AI assistant.
 Respond naturally to the user message. Keep replies short, clear, and useful.
 Avoid emojis unless the user uses them. Do not over-explain.
@@ -39,7 +40,7 @@ ${text}`,
     await message.reply(
       err.status === 429
         ? "⚠️ AI is busy right now, try again in a few seconds."
-        : "⚠️ Something went wrong while generating reply."
+        : "⚠️ Something went wrong while generating reply.",
     );
   }
 }
