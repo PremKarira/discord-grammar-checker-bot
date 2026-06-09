@@ -1,5 +1,10 @@
 import { getVoiceTargets } from "../config/db.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, AuditLogEvent } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  AuditLogEvent,
+} from "discord.js";
 
 const muteTimers = new Map();
 
@@ -125,24 +130,24 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
             if (!freshMember || !freshMember.voice.channelId) return;
 
-            if (afkChannel) {
-              if (freshMember.voice.channelId === AFK_CHANNEL_ID) return;
-
-              if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
+            if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
+              if (
+                afkChannel &&
+                freshMember.voice.channelId !== AFK_CHANNEL_ID
+              ) {
                 await freshMember.voice
                   .setChannel(AFK_CHANNEL_ID)
                   .catch(() => {});
               }
-            } else {
-              if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
-                const currentName =
-                  freshMember.nickname || freshMember.user.username;
 
-                if (!currentName.startsWith("[AFK] ")) {
-                  await freshMember
-                    .setNickname(`[AFK] ${currentName}`)
-                    .catch(() => {});
-                }
+              // Add AFK prefix
+              const currentName =
+                freshMember.nickname || freshMember.user.username;
+
+              if (!currentName.startsWith("[AFK] ")) {
+                await freshMember
+                  .setNickname(`[AFK] ${currentName}`)
+                  .catch(() => {});
               }
             }
           } finally {
