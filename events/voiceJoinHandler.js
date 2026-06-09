@@ -48,62 +48,64 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       await logChannel.send({ content: message }).catch(() => {});
     };
 
-    // Self Deafen
-    if (oldState.selfDeaf !== newState.selfDeaf) {
-      await sendLog(
-        newState.selfDeaf
-          ? `🔇 **${memberName}** deafened themselves.`
-          : `🔊 **${memberName}** undeafened themselves.`,
-      );
-    }
+    if (oldState.channelId === newState.channelId && newState.channelId) {
+      // Self Deafen
+      if (oldState.selfDeaf !== newState.selfDeaf) {
+        await sendLog(
+          newState.selfDeaf
+            ? `🔇 **${memberName}** deafened themselves.`
+            : `🔊 **${memberName}** undeafened themselves.`,
+        );
+      }
 
-    // Server Deafen
-    if (oldState.serverDeaf !== newState.serverDeaf) {
-      const moderator = await getModerator(newState.guild, member.id, "deaf");
+      // Server Deafen
+      if (oldState.serverDeaf !== newState.serverDeaf) {
+        const moderator = await getModerator(newState.guild, member.id, "deaf");
 
-      await sendLog(
-        newState.serverDeaf
-          ? `🔇 **${memberName}** was server deafened by **${moderator}**.`
-          : `🔊 **${memberName}** was server undeafened by **${moderator}**.`,
-      );
-    }
+        await sendLog(
+          newState.serverDeaf
+            ? `🔇 **${memberName}** was server deafened by **${moderator}**.`
+            : `🔊 **${memberName}** was server undeafened by **${moderator}**.`,
+        );
+      }
 
-    // Self Mute
-    if (oldState.selfMute !== newState.selfMute) {
-      await sendLog(
-        newState.selfMute
-          ? `🔈 **${memberName}** muted themselves.`
-          : `🔊 **${memberName}** unmuted themselves.`,
-      );
-    }
+      // Self Mute
+      if (oldState.selfMute !== newState.selfMute) {
+        await sendLog(
+          newState.selfMute
+            ? `🔈 **${memberName}** muted themselves.`
+            : `🔊 **${memberName}** unmuted themselves.`,
+        );
+      }
 
-    // Server Mute
-    if (oldState.serverMute !== newState.serverMute) {
-      const moderator = await getModerator(newState.guild, member.id, "mute");
+      // Server Mute
+      if (oldState.serverMute !== newState.serverMute) {
+        const moderator = await getModerator(newState.guild, member.id, "mute");
 
-      await sendLog(
-        newState.serverMute
-          ? `🔈 **${memberName}** was server muted by **${moderator}**.`
-          : `🔊 **${memberName}** was server unmuted by **${moderator}**.`,
-      );
-    }
+        await sendLog(
+          newState.serverMute
+            ? `🔈 **${memberName}** was server muted by **${moderator}**.`
+            : `🔊 **${memberName}** was server unmuted by **${moderator}**.`,
+        );
+      }
 
-    // Streaming
-    if (oldState.streaming !== newState.streaming) {
-      await sendLog(
-        newState.streaming
-          ? `🖥️ **${memberName}** started streaming.`
-          : `🛑 **${memberName}** stopped streaming.`,
-      );
-    }
+      // Streaming
+      if (oldState.streaming !== newState.streaming) {
+        await sendLog(
+          newState.streaming
+            ? `🖥️ **${memberName}** started streaming.`
+            : `🛑 **${memberName}** stopped streaming.`,
+        );
+      }
 
-    // Camera
-    if (oldState.selfVideo !== newState.selfVideo) {
-      await sendLog(
-        newState.selfVideo
-          ? `📷 **${memberName}** turned on their camera.`
-          : `📷 **${memberName}** turned off their camera.`,
-      );
+      // Camera
+      if (oldState.selfVideo !== newState.selfVideo) {
+        await sendLog(
+          newState.selfVideo
+            ? `📷 **${memberName}** turned on their camera.`
+            : `📷 **${memberName}** turned off their camera.`,
+        );
+      }
     }
 
     // ================= AFK LOGIC =================
