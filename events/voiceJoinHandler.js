@@ -37,6 +37,24 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
     const member = newState.member;
     const memberName = member.displayName;
 
+    // ================= IN VC ROLE =================
+
+    const vcRole = newState.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === "in-vc",
+    );
+
+    if (vcRole) {
+      const isInVC = !!newState.channelId;
+
+      if (isInVC && !member.roles.cache.has(vcRole.id)) {
+        await member.roles.add(vcRole).catch(() => {});
+      }
+
+      if (!isInVC && member.roles.cache.has(vcRole.id)) {
+        await member.roles.remove(vcRole).catch(() => {});
+      }
+    }
+
     // ================= VOICE LOGS =================
 
     const logChannel = await newState.guild.channels
