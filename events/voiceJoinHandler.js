@@ -128,11 +128,15 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
     // ================= AFK LOGIC =================
 
+    const isMuted = newState.selfMute || newState.serverMute;
+
+    const isDeafened = newState.selfDeaf || newState.serverDeaf;
+
     if (
-      newState.selfMute &&
-      newState.selfDeaf &&
-      (!newState.channelId || newState.channelId !== AFK_CHANNEL_ID) &&
-      member.id !== "428902961847205899"
+      isMuted &&
+      isDeafened &&
+      (!newState.channelId || newState.channelId !== AFK_CHANNEL_ID)
+      // && member.id !== "428902961847205899"
     ) {
       if (!muteTimers.has(member.id)) {
         const userId = member.id;
@@ -150,7 +154,13 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
             if (!freshMember || !freshMember.voice.channelId) return;
 
-            if (freshMember.voice.selfMute && freshMember.voice.selfDeaf) {
+            const isMuted2 =
+              freshMember.voice.selfMute || freshMember.voice.serverMute;
+
+            const isDeafened2 =
+              freshMember.voice.selfDeaf || freshMember.voice.serverDeaf;
+
+            if (isMuted2 && isDeafened2) {
               if (
                 afkChannel &&
                 freshMember.voice.channelId !== AFK_CHANNEL_ID
@@ -183,7 +193,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
         muteTimers.delete(member.id);
       }
 
-      const currentName = member.nickname || member.user.username;
+      const currentName = member.nickname || member.displayName || member.user.username || "XYZ";
 
       if (currentName.startsWith("[AFK] ")) {
         const newName = currentName.replace("[AFK] ", "");
