@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 
 const muteTimers = new Map();
+let afkCreating = null;
 
 async function getModerator(guild, memberId, changeKey) {
   await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -23,11 +24,62 @@ async function getModerator(guild, memberId, changeKey) {
 
   return entry?.executor?.tag ?? "Unknown";
 }
+let creatingAFK = false;
+
+async function getAFKChannel(guild, currentChannel = null) {
+  // Find existing AFK VC
+  const afkChannel = guild.channels.cache.find(
+    (c) => c.isVoiceBased() && c.name.toLowerCase() === "afk",
+  );
+
+  if (afkChannel) {
+    return afkChannel.id;
+  }
+
+  // If another event is already creating AFK, wait
+  if (creatingAFK) {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+
+    const existingAFK = guild.channels.cache.find(
+      (c) => c.isVoiceBased() && c.name.toLowerCase() === "afk",
+    );
+
+    return existingAFK?.id ?? null;
+  }
+
+  creatingAFK = true;
+
+  try {
+    // Find empty VC
+    const emptyVC = guild.channels.cache.find(
+      (c) => c.isVoiceBased() && c.members.size === 0,
+    );
+
+    if (emptyVC) {
+      await emptyVC.setName("AFK").catch(() => {});
+      return emptyVC.id;
+    }
+
+    // Create AFK in same category
+    const newAFK = await guild.channels
+      .create({
+        name: "AFK",
+        type: 2,
+        parent: currentChannel?.parentId ?? null,
+        reason: "Created automatically for AFK users",
+      })
+      .catch(() => null);
+
+    return newAFK?.id ?? null;
+  } finally {
+    creatingAFK = false;
+  }
+}
 
 export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
   const GUILD_ID = "875427163598368779";
   const TEXT_CHANNEL_ID = "875427164076531743";
-  const AFK_CHANNEL_ID = "1513666361656610898";
+  const AFK_CHANNEL_ID = await getAFKChannel(newState.guild, newState.channel);
   const DEAFEN_LOG_CHANNEL_ID = "1485503633796759744";
 
   try {
@@ -193,7 +245,8 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
         muteTimers.delete(member.id);
       }
 
-      const currentName = member.nickname || member.displayName || member.user.username || "XYZ";
+      const currentName =
+        member.nickname || member.displayName || member.user.username || "XYZ";
 
       if (currentName.startsWith("[AFK] ")) {
         const newName = currentName.replace("[AFK] ", "");
