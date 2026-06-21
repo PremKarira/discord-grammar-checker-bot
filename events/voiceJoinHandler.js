@@ -224,7 +224,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
 
               // Add AFK prefix
               const currentName =
-                freshMember.nickname || freshMember.user.username;
+                member.nickname || member.displayName || "XYZ";
 
               if (!currentName.startsWith("[AFK] ")) {
                 await freshMember
@@ -245,9 +245,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
         muteTimers.delete(member.id);
       }
 
-      const currentName =
-        member.nickname || member.displayName || member.user.username || "XYZ";
-
+      const currentName = member.nickname || member.displayName || "XYZ";
       if (currentName.startsWith("[AFK] ")) {
         const newName = currentName.replace("[AFK] ", "");
         await member.setNickname(newName).catch(() => {});
