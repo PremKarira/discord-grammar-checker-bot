@@ -21,6 +21,7 @@ import { setPresenceCommand } from "../commands/setPresence.js";
 import { cscheckCommand } from "../commands/cscheck.js";
 import { sendFile } from "../commands/sendFile.js";
 import { deleteUpload } from "../commands/deleteUpload.js";
+import { getUploadsCollection, getConfigCollection } from "../config/db.js";
 
 const ownerCommands = {
   addtester: addTester,
