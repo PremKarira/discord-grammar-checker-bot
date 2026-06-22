@@ -3,17 +3,22 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
-let db, configCollection;
+let db, configCollection, uploadsCollection;
 
 export async function initDB() {
   await mongoClient.connect();
   db = mongoClient.db("ngnlBotGrammar");
   configCollection = db.collection("config");
+  uploadsCollection = db.collection("uploads");
   console.log("✅ Connected to MongoDB");
 }
 
 export function getConfigCollection() {
   return configCollection;
+}
+
+export function getUploadsCollection() {
+  return uploadsCollection;
 }
 
 // Fetch targets or testers from DB
@@ -85,4 +90,24 @@ export async function saveBotStatus(status) {
     { $set: status },
     { upsert: true },
   );
+}
+
+// ================= UPLOAD SYSTEM =================
+
+export async function saveUpload(data) {
+  await uploadsCollection.insertOne(data);
+}
+
+export async function getUpload(hex) {
+  return await uploadsCollection.findOne({
+    hex,
+  });
+}
+export async function getUploads() {
+  return await uploadsCollection
+    .find({})
+    .sort({
+      createdAt: -1,
+    })
+    .toArray();
 }

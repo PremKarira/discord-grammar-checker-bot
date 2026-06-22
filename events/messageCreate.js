@@ -19,6 +19,8 @@ import util from "util";
 import { doCommand } from "../commands/doCommand.js";
 import { setPresenceCommand } from "../commands/setPresence.js";
 import { cscheckCommand } from "../commands/cscheck.js";
+import { sendFile } from "../commands/sendFile.js";
+import { deleteUpload } from "../commands/deleteUpload.js";
 
 const ownerCommands = {
   addtester: addTester,
@@ -404,6 +406,14 @@ export async function handleMessageCreate(
 
       await cscheckCommand(message, args);
       return;
+    }
+    if (content.startsWith(`${PREFIX}send`)) {
+      const args = message.content.split(" ").slice(1);
+      return sendFile(message, args);
+    }
+    if (isOwner && content.startsWith(`${PREFIX}delete`)) {
+      const args = message.content.split(" ").slice(1);
+      return deleteUpload(message, args);
     }
 
     // analyze and forward if author is target

@@ -27,6 +27,8 @@ import { handleDoButtons } from "./commands/doCommand.js";
 import { setupErrorHandler } from "./utils/errorHandler.js";
 import { logToSupport } from "./commands/doCommand.js";
 
+import uploadRouter from "./routes/upload.js";
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -154,6 +156,7 @@ client.on("interactionCreate", async (interaction) => {
 
 const app = express();
 app.get("/", (req, res) => res.send("✅ Discord bot running"));
+app.use("/upload", uploadRouter);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
