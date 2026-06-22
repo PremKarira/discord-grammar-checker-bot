@@ -6,6 +6,7 @@ import {
   AuditLogEvent,
 } from "discord.js";
 
+const afkReturnChannels = new Map();
 const muteTimers = new Map();
 let afkCreating = null;
 
@@ -217,6 +218,11 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
                 afkChannel &&
                 freshMember.voice.channelId !== AFK_CHANNEL_ID
               ) {
+                // Save original VC
+                afkReturnChannels.set(
+                  freshMember.id,
+                  freshMember.voice.channelId,
+                );
                 await freshMember.voice
                   .setChannel(AFK_CHANNEL_ID)
                   .catch(() => {});
@@ -235,7 +241,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
           } finally {
             muteTimers.delete(userId);
           }
-        }, 60 * 1000);
+        }, 1 * 1000);
 
         muteTimers.set(member.id, timer);
       }
@@ -249,6 +255,42 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       if (currentName.startsWith("[AFK] ")) {
         const newName = currentName.replace("[AFK] ", "");
         await member.setNickname(newName).catch(() => {});
+      }
+    }
+
+    // ================= RETURN FROM AFK =================
+
+    if (
+      oldState.channelId === AFK_CHANNEL_ID &&
+      newState.channelId === AFK_CHANNEL_ID
+    ) {
+      const wasMuted = oldState.selfMute || oldState.serverMute;
+
+      const wasDeafened = oldState.selfDeaf || oldState.serverDeaf;
+
+      const nowActive = !newState.selfDeaf && !newState.serverDeaf;
+
+      if (wasDeafened && nowActive) {
+        const oldVC = afkReturnChannels.get(member.id);
+
+        if (oldVC) {
+          const channel = newState.guild.channels.cache.get(oldVC);
+
+          if (channel) {
+            await member.voice.setChannel(oldVC).catch(() => {});
+          }
+
+          afkReturnChannels.delete(member.id);
+        }
+
+        // remove AFK nickname
+        const currentName = member.nickname || member.displayName || "XYZ";
+
+        if (currentName.startsWith("[AFK] ")) {
+          await member
+            .setNickname(currentName.replace("[AFK] ", ""))
+            .catch(() => {});
+        }
       }
     }
 
