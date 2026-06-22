@@ -241,7 +241,7 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
           } finally {
             muteTimers.delete(userId);
           }
-        }, 1 * 1000);
+        }, 60 * 1000);
 
         muteTimers.set(member.id, timer);
       }
