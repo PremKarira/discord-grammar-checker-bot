@@ -8,18 +8,21 @@ export async function evalCommand(client, message, code) {
 
     // ================= EMIT =================
 
+    // ================= EMIT =================
     if (code.startsWith("emit()")) {
       if (!message.reference) {
         return message.reply("❌ Reply to a message to use emit()");
       }
 
-      const repliedMsg = await message.fetchReference();
+      const original = await message.fetchReference();
 
-      if (!repliedMsg?.content) {
+      if (!original?.content) {
         return message.reply("❌ Invalid replied message");
       }
 
       const args = code.split(/\s+/);
+
+      let author = original.author;
 
       if (args.includes("-a")) {
         const index = args.indexOf("-a");
@@ -38,15 +41,23 @@ export async function evalCommand(client, message, code) {
           return message.reply("❌ Invalid user");
         }
 
-        repliedMsg.author = user;
+        author = user;
       }
 
-      repliedMsg.__emitted = true;
+      const fakeMessage = Object.create(Object.getPrototypeOf(original));
 
-      client.emit("messageCreate", repliedMsg);
+      Object.assign(fakeMessage, original);
+
+      fakeMessage.author = author;
+
+      fakeMessage.client = client;
+
+      fakeMessage.__emitted = true;
+
+      client.emit("messageCreate", fakeMessage);
 
       return message.reply(
-        `⚡ Executed emit()\n> ${repliedMsg.content}\nAuthor: ${repliedMsg.author.tag}`,
+        `⚡ Executed emit()\n> ${fakeMessage.content}\nAuthor: ${author.tag}`,
       );
     }
 

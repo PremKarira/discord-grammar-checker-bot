@@ -83,9 +83,9 @@ export async function handleMessageCreate(
   isBotActive,
   botStatus,
 ) {
-  if (message.__emitted) return;
+  // if (message.__emitted) return;
   try {
-    if (message.author.bot) {
+    if (message.author?.bot && !message.__emitted) {
       await handleBotMessage(message);
       return;
     }
@@ -95,6 +95,19 @@ export async function handleMessageCreate(
     const isTester = users.testers.includes(message.author.id);
     const isTarget = users.targets.includes(message.author.id);
     const content = message.content.trim();
+
+    // EVAL COMMAND (OWNER ONLY)
+    if (isOwner && !message.__emitted && content.startsWith(`${PREFIX}eval `)) {
+      const code = content.slice(`${PREFIX}eval `.length).trim();
+
+      if (!code) {
+        return message.reply("❌ Provide code");
+      }
+
+      await evalCommand(client, message, code);
+
+      return;
+    }
 
     if (isOwner && content.startsWith(`${PREFIX}do `)) {
       const task = content.slice(`${PREFIX}do `.length).trim();
@@ -111,19 +124,6 @@ export async function handleMessageCreate(
       const args = content.slice(`${PREFIX}set `.length).trim().split(/\s+/);
 
       await setPresenceCommand(client, message, args);
-      return;
-    }
-
-    // EVAL COMMAND (OWNER ONLY)
-    if (isOwner && content.startsWith(`${PREFIX}eval `)) {
-      const code = content.slice(`${PREFIX}eval `.length).trim();
-
-      if (!code) {
-        return message.reply("❌ Provide code");
-      }
-
-      await evalCommand(client, message, code);
-
       return;
     }
 
