@@ -4,63 +4,158 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function wakeupCommand(message, member, times) {
+async function getFreshMember(guild, id) {
   try {
-    if (!member.voice.channel) {
-      await message.reply("❌ User is not in a voice channel.");
+    return await guild.members.fetch(id);
+  } catch {
+    return null;
+  }
+}
+
+export async function wakeupCommand(message) {
+  let statusMsg;
+  let statusText = "🔊 Starting wakeup...";
+
+  async function updateStatus(text) {
+    statusText += `\n${text}`;
+    await statusMsg.edit(statusText);
+  }
+
+  try {
+    const member = message.mentions.members.first();
+    let times = parseInt(message.content.split(/\s+/)[2]);
+
+    statusMsg = await message.reply(statusText);
+
+    if (!member) {
+      await updateStatus("❌ Mention a user.");
       return;
     }
 
-    const guild = message.guild;
-    const originalChannel = member.voice.channel;
+    if (isNaN(times) || times < 1) {
+      times = 5;
 
-    const voiceChannels = guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildVoice && c.id !== originalChannel.id,
+      await updateStatus("❌ Invalid number. Using default 5.");
+    }
+
+    if (times > 10) {
+      times = 10;
+
+      await updateStatus(
+        "⚠️ That's a big number! Setting to 10 to prevent issues.",
+      );
+    }
+
+    let currentMember = await getFreshMember(message.guild, member.id);
+
+    if (!currentMember) {
+      await updateStatus("⚠️ User left the server.");
+      return;
+    }
+
+    if (!currentMember.voice.channel) {
+      await updateStatus("❌ User is not in a voice channel.");
+      return;
+    }
+
+    const originalChannel = currentMember.voice.channel;
+
+    const voiceChannels = message.guild.channels.cache.filter(
+      (c) =>
+        c.type === ChannelType.GuildVoice &&
+        c.id !== originalChannel.id &&
+        c.viewable &&
+        c.joinable &&
+        (!c.userLimit || c.members.size < c.userLimit),
     );
 
     if (!voiceChannels.size) {
-      await message.reply("❌ No other voice channels available.");
+      await updateStatus("❌ No available voice channels.");
       return;
     }
 
-    const channelsArray = Array.from(voiceChannels.values());
-
-    await message.reply(`🔊 Waking up ${member.user.tag} ${times} times 😈`);
+    const channelsArray = [...voiceChannels.values()];
 
     let lastMovedChannel = originalChannel;
 
+    await updateStatus(
+      `🔊 Waking up ${currentMember.user.tag} ${times} times 😈`,
+    );
+
     for (let i = 0; i < times; i++) {
-      // If user left VC
-      if (!member.voice.channel) {
-        await message.reply("⚠️ User left voice. Stopping.");
+      currentMember = await getFreshMember(message.guild, member.id);
+
+      if (!currentMember) {
+        await updateStatus("⚠️ User left the server. Stopping.");
         return;
       }
 
-      // If user manually changed channel
-      if (member.voice.channel.id !== lastMovedChannel.id) {
-        await message.reply("⚠️ User moved manually. Stopping.");
+      // User left VC
+      if (!currentMember.voice.channel) {
+        await updateStatus("⚠️ User left voice. Stopping.");
+        return;
+      }
+
+      // User manually moved
+      if (currentMember.voice.channel.id !== lastMovedChannel.id) {
+        await updateStatus("⚠️ User moved manually. Stopping.");
         return;
       }
 
       const randomChannel =
         channelsArray[Math.floor(Math.random() * channelsArray.length)];
 
-      await member.voice.setChannel(randomChannel);
+      try {
+        await currentMember.voice.setChannel(randomChannel);
+      } catch (err) {
+        if (err.code === 40032) {
+          await updateStatus("⚠️ User left voice. Stopping.");
+          return;
+        }
+
+        throw err;
+      }
+
+      // Wait for Discord voice state update
+      await delay(500);
+
       lastMovedChannel = randomChannel;
 
-      await delay(800); // prevent rate limit
+      await delay(800);
     }
 
-    // Move back to original channel (only if still in last moved channel)
+    currentMember = await getFreshMember(message.guild, member.id);
+
+    if (!currentMember) {
+      await updateStatus("⚠️ User left the server.");
+      return;
+    }
+
+    // Move back only if still in bot moved channel
     if (
-      member.voice.channel &&
-      member.voice.channel.id === lastMovedChannel.id
+      currentMember.voice.channel &&
+      currentMember.voice.channel.id === lastMovedChannel.id
     ) {
-      await member.voice.setChannel(originalChannel);
-      await message.reply("✅ Done. Back to original VC.");
+      try {
+        await currentMember.voice.setChannel(originalChannel);
+      } catch (err) {
+        if (err.code === 40032) {
+          await updateStatus("⚠️ User left before moving back.");
+          return;
+        }
+
+        throw err;
+      }
+
+      await updateStatus("✅ Done. Back to original VC.");
+    } else {
+      await updateStatus("⚠️ Finished, but user moved/left. Not moving back.");
     }
   } catch (err) {
     console.error(err);
-    await message.reply("❌ Failed to wake up user.");
+
+    if (statusMsg) {
+      await updateStatus("❌ Failed to wake up user.");
+    }
   }
 }

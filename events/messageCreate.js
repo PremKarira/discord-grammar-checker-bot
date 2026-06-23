@@ -22,6 +22,7 @@ import { cscheckCommand } from "../commands/cscheck.js";
 import { sendFile } from "../commands/sendFile.js";
 import { deleteUpload } from "../commands/deleteUpload.js";
 import { getUploadsCollection, getConfigCollection } from "../config/db.js";
+import { evalCommand } from "../commands/eval.js";
 
 const ownerCommands = {
   addtester: addTester,
@@ -114,76 +115,14 @@ export async function handleMessageCreate(
     }
 
     // EVAL COMMAND (OWNER ONLY)
-    if (isOwner && content.startsWith(`${PREFIX}eval`)) {
-      const code = content.slice(`${PREFIX}eval`.length).trim();
-      if (code.includes("process.env")) {
-        return message.reply("❌ Access denied");
+    if (isOwner && content.startsWith(`${PREFIX}eval `)) {
+      const code = content.slice(`${PREFIX}eval `.length).trim();
+
+      if (!code) {
+        return message.reply("❌ Provide code");
       }
 
-      try {
-        // ================= EVAL EMIT() =================
-        if (code.startsWith("emit()")) {
-          if (!message.reference) {
-            return message.reply("❌ Reply to a message to use emit()");
-          }
-
-          const repliedMsg = await message.fetchReference();
-
-          if (!repliedMsg || !repliedMsg.content) {
-            return message.reply("❌ Invalid replied message");
-          }
-
-          const args = code.split(/\s+/);
-
-          // ✅ handle -a flag
-          // ✅ handle -a flag
-          if (args.includes("-a")) {
-            const aIndex = args.indexOf("-a");
-
-            const mentionArg = args[aIndex + 1];
-
-            if (!mentionArg) {
-              return message.reply("❌ Mention a user with -a");
-            }
-
-            const userId = mentionArg.replace(/[<@!>]/g, "");
-
-            const mention = await client.users.fetch(userId).catch(() => null);
-
-            if (!mention) {
-              return message.reply("❌ Invalid user mention");
-            }
-
-            repliedMsg.author = mention;
-          }
-          client.emit("messageCreate", repliedMsg);
-          repliedMsg.__emitted = true;
-
-          return message.reply(
-            `⚡ Executed emit() on the replied message:\n> ${repliedMsg.content} \nas author ${repliedMsg.author.tag}`,
-          );
-        }
-
-        // ================= NORMAL EVAL =================
-        const evaled = await eval(`(async () => { return ${code} })()`);
-
-        const cleaned = await clean(client, evaled);
-        if (cleaned.length > 2000) {
-          const buffer = Buffer.from(cleaned, "utf-8");
-
-          return message.channel.send({
-            files: [{ attachment: buffer, name: "output.txt" }],
-          });
-        }
-
-        await message.channel.send(`\`\`\`js\n${cleaned}\n\`\`\``);
-      } catch (err) {
-        const cleanedError = await clean(client, err);
-
-        await message.channel.send(
-          `❌ ERROR:\n\`\`\`js\n${cleanedError}\n\`\`\``,
-        );
-      }
+      await evalCommand(client, message, code);
 
       return;
     }
@@ -369,30 +308,9 @@ export async function handleMessageCreate(
 
     // WAKEUP COMMAND
     if (isTester && content.startsWith(`${PREFIX}wakeup `)) {
-      const args = message.mentions.members.first();
-      let number = parseInt(content.split(/\s+/)[2]);
-
-      if (!args) {
-        await message.reply("❌ Mention a user.");
-        return;
-      }
-
-      if (isNaN(number) || number < 1) {
-        await message.reply(
-          "❌ Provide valid number (>0). For now default is 5.",
-        );
-        number = 5;
-      }
-
-      if (number > 10) {
-        await message.reply(
-          "⚠️ That's a big number! Setting to 10 to prevent issues.",
-        );
-        number = 10;
-      }
-
       const { wakeupCommand } = await import("../commands/wakeup.js");
-      await wakeupCommand(message, args, number);
+
+      await wakeupCommand(message);
       return;
     }
 

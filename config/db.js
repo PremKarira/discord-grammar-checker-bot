@@ -4,13 +4,20 @@ dotenv.config();
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db, configCollection, uploadsCollection;
-
 export async function initDB() {
   await mongoClient.connect();
   db = mongoClient.db("ngnlBotGrammar");
   configCollection = db.collection("config");
   uploadsCollection = db.collection("uploads");
   console.log("✅ Connected to MongoDB");
+}
+
+export function getMongoClient() {
+  return mongoClient;
+}
+
+export function getDB() {
+  return db;
 }
 
 export function getConfigCollection() {
