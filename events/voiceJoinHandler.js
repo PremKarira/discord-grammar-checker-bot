@@ -294,6 +294,19 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       }
     }
 
+    // ================= MANUAL JOIN AFK VC =================
+
+    if (
+      newState.channelId === AFK_CHANNEL_ID &&
+      oldState.channelId !== AFK_CHANNEL_ID
+    ) {
+      const currentName = member.nickname || member.displayName || "XYZ";
+
+      if (!currentName.startsWith("[AFK] ")) {
+        await member.setNickname(`[AFK] ${currentName}`).catch(() => {});
+      }
+    }
+
     // ================= LEAVE AFK VC =================
 
     if (
