@@ -294,6 +294,28 @@ export async function handleVoiceStateUpdate(oldState, newState, isBotActive) {
       }
     }
 
+    // ================= LEAVE AFK VC =================
+
+    if (
+      oldState.channelId === AFK_CHANNEL_ID &&
+      newState.channelId !== AFK_CHANNEL_ID
+    ) {
+      const currentName = member.nickname || member.displayName || "XYZ";
+
+      if (currentName.startsWith("[AFK] ")) {
+        await member
+          .setNickname(currentName.replace("[AFK] ", ""))
+          .catch(() => {});
+      }
+
+      afkReturnChannels.delete(member.id);
+
+      if (muteTimers.has(member.id)) {
+        clearTimeout(muteTimers.get(member.id));
+        muteTimers.delete(member.id);
+      }
+    }
+
     // ================= JOIN MESSAGE =================
 
     // if (!isBotActive.value) return;
