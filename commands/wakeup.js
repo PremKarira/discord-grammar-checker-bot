@@ -64,17 +64,28 @@ export async function wakeupCommand(message) {
       (c) =>
         c.type === ChannelType.GuildVoice &&
         c.id !== originalChannel.id &&
+        c.name.toLowerCase() !== "afk" &&
         c.viewable &&
         c.joinable &&
-        (!c.userLimit || c.members.size < c.userLimit),
+        c.members.size === 0,
     );
 
-    if (!voiceChannels.size) {
-      await updateStatus("❌ No available voice channels.");
-      return;
-    }
+    let channelsArray = [...voiceChannels.values()];
 
-    const channelsArray = [...voiceChannels.values()];
+    while (channelsArray.length < 2) {
+      await updateStatus(
+        `⚠️ No free VC available. Creating wakeup${channelsArray.length + 1}...`,
+      );
+
+      const channel = await message.guild.channels.create({
+        name: `wakeup${channelsArray.length + 1}`,
+        type: ChannelType.GuildVoice,
+      });
+
+      channelsArray.push(channel);
+
+      await updateStatus(`✅ Created ${channel.name}`);
+    }
 
     let lastMovedChannel = originalChannel;
 
@@ -102,8 +113,7 @@ export async function wakeupCommand(message) {
         return;
       }
 
-      const randomChannel =
-        channelsArray[Math.floor(Math.random() * channelsArray.length)];
+      const randomChannel = channelsArray[i % 2];
 
       try {
         await currentMember.voice.setChannel(randomChannel);
