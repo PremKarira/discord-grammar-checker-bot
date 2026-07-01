@@ -25,55 +25,62 @@ async function getModerator(guild, memberId, changeKey) {
 
   return entry?.executor?.tag ?? "Unknown";
 }
-let creatingAFK = false;
+
+let creatingVCs = false;
 
 async function getAFKChannel(guild, currentChannel = null) {
-  // Find existing AFK VC
-  const afkChannel = guild.channels.cache.find(
-    (c) => c.isVoiceBased() && c.name.toLowerCase() === "afk",
-  );
-
-  if (afkChannel) {
-    return afkChannel.id;
+  if (creatingVCs) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
-  // If another event is already creating AFK, wait
-  if (creatingAFK) {
-    await new Promise((resolve) => setTimeout(resolve, 4000));
-
-    const existingAFK = guild.channels.cache.find(
-      (c) => c.isVoiceBased() && c.name.toLowerCase() === "afk",
-    );
-
-    return existingAFK?.id ?? null;
-  }
-
-  creatingAFK = true;
+  creatingVCs = true;
 
   try {
-    // Find empty VC
-    const emptyVC = guild.channels.cache.find(
-      (c) => c.isVoiceBased() && c.members.size === 0,
-    );
+    async function checkVC(name, hidden) {
+      let channel = guild.channels.cache.find(
+        (c) => c.isVoiceBased() && c.name.toLowerCase() === name.toLowerCase(),
+      );
 
-    if (emptyVC) {
-      await emptyVC.setName("AFK").catch(() => {});
-      return emptyVC.id;
+      // Create channel if missing
+      if (!channel) {
+        channel = await guild.channels
+          .create({
+            name,
+            type: 2,
+            parent: currentChannel?.parentId ?? null,
+            reason: `${name} auto created`,
+          })
+          .catch(() => null);
+      }
+
+      if (!channel) return null;
+
+      // Fix permissions every time
+      await channel.permissionOverwrites
+        .edit(guild.roles.everyone, {
+          ViewChannel: !hidden,
+          Connect: true,
+        })
+        .catch(() => {});
+
+      return channel.id;
     }
 
-    // Create AFK in same category
-    const newAFK = await guild.channels
-      .create({
-        name: "AFK",
-        type: 2,
-        parent: currentChannel?.parentId ?? null,
-        reason: "Created automatically for AFK users",
-      })
-      .catch(() => null);
+    // Required VCs
 
-    return newAFK?.id ?? null;
+    await checkVC("Game Voice 1", false);
+
+    await checkVC("Game Voice 2", true);
+
+    const afkId = await checkVC("AFK", false);
+
+    return afkId;
+  } catch (err) {
+    console.error("AFK VC setup error:", err);
+
+    return null;
   } finally {
-    creatingAFK = false;
+    creatingVCs = false;
   }
 }
 
