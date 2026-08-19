@@ -20,58 +20,107 @@ router.get("/", async (req, res) => {
           <title>Overview & Bot Info Page</title>
           <style>
             body {
-              font-family: Arial, sans-serif;
-              background-color: #f4f4f9;
-              color: #333;
-              margin: 0;
-              padding: 20px;
-            }
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              background: white;
+              background: #121212;
+              color: #eee;
+              font: 16px Arial, sans-serif;
               padding: 30px;
-              border-radius: 8px;
-              box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+              text-align: center;
+              margin: 0;
             }
+
+            .container {
+              max-width: 900px;
+              margin: 50px auto;
+              padding: 30px;
+              background: #181818;
+              border-radius: 10px;
+              box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+              text-align: left;
+            }
+
             h2 {
               margin-top: 0;
+              color: #fff;
+              text-align: center;
             }
+
+            h3 {
+              color: #fff;
+              margin-top: 0;
+            }
+
+            p {
+              color: #aaa;
+            }
+
             .section {
               margin-bottom: 20px;
               padding-bottom: 15px;
-              border-bottom: 1px solid #eee;
+              border-bottom: 1px solid #2a2a2a;
             }
+
+            .section:last-of-type {
+              border-bottom: none;
+            }
+
             ul {
               margin: 5px 0;
               padding-left: 20px;
+              color: #ccc;
             }
+
+            li {
+              margin: 6px 0;
+            }
+
+            code {
+              background: #222;
+              color: #ddd;
+              padding: 4px 7px;
+              border-radius: 4px;
+              font-family: Consolas, monospace;
+            }
+
             .btn {
               display: inline-block;
-              margin-top: 15px;
-              padding: 10px 20px;
-              font-size: 14px;
+              margin: 10px 0 0;
+              padding: 12px 24px;
+              font-size: 16px;
               color: white;
-              background-color: #5865F2;
+              background: #5865f2;
               border: none;
-              border-radius: 5px;
+              border-radius: 6px;
               text-decoration: none;
               cursor: pointer;
+              transition: background 0.2s;
             }
+
             .btn:hover {
-              background-color: #4752C4;
+              background: #4752c4;
             }
           </style>
         </head>
+
         <body>
           <div class="container">
-            <h2>� Bot Overview & Status Info</h2>
-            
+            <h2>📊 Bot Overview & Status Info</h2>
+
             <div class="section">
               <h3>⚙️ Bot Status</h3>
-              <p><strong>Text Commands:</strong> ${botStatus.commandEnabled ? "🟢 ON" : "🔴 OFF"}</p>
-              <p><strong>Voice State Updates:</strong> ${botStatus.voiceStateUpdate ? "🟢 ON" : "🔴 OFF"}</p>
-              <p><strong>Message Forwarding:</strong> ${botStatus.forwardingEnabled ? "🟢 ON" : "🔴 OFF"}</p>
+              <p>
+                <strong>Text Commands:</strong>
+                ${botStatus.commandEnabled ? "🟢 ON" : "🔴 OFF"}
+              </p>
+
+              <p>
+                <strong>Voice State Updates:</strong>
+                ${botStatus.voiceStateUpdate ? "🟢 ON" : "🔴 OFF"}
+              </p>
+
+              <p>
+                <strong>Message Forwarding:</strong>
+                ${botStatus.forwardingEnabled ? "🟢 ON" : "🔴 OFF"}
+              </p>
             </div>
 
             <div class="section">
