@@ -30,6 +30,9 @@ import { logToSupport } from "./commands/doCommand.js";
 import uploadRouter, {
   setUploadDiscordClient,
 } from "./routes/upload.js";
+import statusRouter from "./routes/status.js";
+import overviewRouter from "./routes/overview.js";
+import indexRouter from "./routes/index.js";
 
 const client = new Client({
   intents: [
@@ -159,8 +162,11 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 const app = express();
-app.get("/", (req, res) => res.send("✅ Discord bot running"));
+
+app.use("/", indexRouter);
 app.use("/upload", uploadRouter);
+app.use("/status", statusRouter);
+app.use("/overview", overviewRouter);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
