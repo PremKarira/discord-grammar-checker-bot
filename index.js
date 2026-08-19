@@ -33,7 +33,7 @@ import uploadRouter, {
 import statusRouter from "./routes/status.js";
 import overviewRouter from "./routes/overview.js";
 import indexRouter from "./routes/index.js";
-import authRouter from "./routes/auth.js";
+import authRouter, { requireDiscordLogin } from "./routes/auth.js";
 
 const client = new Client({
   intents: [
@@ -166,9 +166,9 @@ const app = express();
 
 app.use(authRouter);
 app.use("/", indexRouter);
-app.use("/upload", uploadRouter);
-app.use("/status", statusRouter);
-app.use("/overview", overviewRouter);
+app.use("/upload", requireDiscordLogin, uploadRouter);
+app.use("/status", requireDiscordLogin, statusRouter);
+app.use("/overview", requireDiscordLogin, overviewRouter);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 

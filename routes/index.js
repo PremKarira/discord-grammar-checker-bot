@@ -3,6 +3,23 @@ import { Router } from "express";
 const router = Router();
 
 router.get("/", (req, res) => {
+  const pageContent = req.user
+    ? `
+          <h2>✅ Discord bot running</h2>
+          <p>Choose a page:</p>
+          <div>
+            <a href="/upload" class="btn">Upload</a>
+            <a href="/status" class="btn">Status</a>
+            <a href="/overview" class="btn">Overview</a>
+          </div>
+          <p><a href="/auth/logout">Log out</a></p>
+      `
+    : `
+          <h2>Discord login required</h2>
+          <p>Log in with Discord to access the bot pages.</p>
+          <a href="/auth/discord" class="btn">Login with Discord</a>
+      `;
+
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -43,13 +60,7 @@ router.get("/", (req, res) => {
       </head>
       <body>
         <div class="container">
-          <h2>✅ Discord bot running</h2>
-          <p>Select a page below:</p>
-          <div>
-            <a href="/upload" class="btn">Upload Page</a>
-            <a href="/status" class="btn">Status Page</a>
-            <a href="/overview" class="btn">Overview Page</a>
-          </div>
+          ${pageContent}
         </div>
       </body>
     </html>

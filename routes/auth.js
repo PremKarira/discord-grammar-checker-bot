@@ -35,14 +35,19 @@ router.use(passport.session());
 router.get("/auth/discord", passport.authenticate("discord"));
 router.get(
   "/auth/discord/callback",
-  passport.authenticate("discord", { failureRedirect: "/upload" }),
-  (req, res) => res.redirect("/upload"),
+  passport.authenticate("discord", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/"),
 );
 router.get("/auth/logout", (req, res, next) => {
   req.logout((error) => {
     if (error) return next(error);
-    res.redirect("/upload");
+    res.redirect("/");
   });
 });
+
+export function requireDiscordLogin(req, res, next) {
+  if (req.user) return next();
+  return res.redirect("/");
+}
 
 export default router;
