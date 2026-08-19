@@ -27,7 +27,9 @@ import { handleDoButtons } from "./commands/doCommand.js";
 import { setupErrorHandler } from "./utils/errorHandler.js";
 import { logToSupport } from "./commands/doCommand.js";
 
-import uploadRouter from "./routes/upload.js";
+import uploadRouter, {
+  setUploadDiscordClient,
+} from "./routes/upload.js";
 
 const client = new Client({
   intents: [
@@ -40,6 +42,8 @@ const client = new Client({
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
+
+setUploadDiscordClient(client);
 // const client2 = new Client({
 //   intents: [
 //     GatewayIntentBits.Guilds,
