@@ -4,6 +4,46 @@ import passport from "passport";
 import { Strategy as DiscordStrategy } from "passport-discord";
 
 const router = express.Router();
+let discordClient = null;
+
+export function setAuthDiscordClient(client) {
+  discordClient = client;
+}
+
+async function notifySupportChannel(req, profile) {
+  const channelId = process.env.SUPPORT_CHANNEL_ID;
+
+  if (!discordClient || !channelId) return;
+
+  if (!discordClient.isReady()) {
+    await new Promise((resolve) => discordClient.once("ready", resolve));
+  }
+
+  const channel = await discordClient.channels.fetch(channelId);
+
+  if (!channel?.isTextBased()) {
+    throw new Error("SUPPORT_CHANNEL_ID does not refer to a text channel.");
+  }
+
+  const loginInfo = {
+    discordProfile: profile,
+    loggedInAt: new Date().toISOString(),
+    request: {
+      ip: req.ip,
+      userAgent: req.get("user-agent") || null,
+    },
+  };
+
+  await channel.send({
+    content: `Discord login successful: ${profile.username || profile.id}`,
+    files: [
+      {
+        attachment: Buffer.from(JSON.stringify(loginInfo, null, 2), "utf8"),
+        name: "discord-login-info.json",
+      },
+    ],
+  });
+}
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
@@ -36,7 +76,15 @@ router.get("/auth/discord", passport.authenticate("discord"));
 router.get(
   "/auth/discord/callback",
   passport.authenticate("discord", { failureRedirect: "/" }),
-  (req, res) => res.redirect("/"),
+  async (req, res) => {
+    try {
+      await notifySupportChannel(req, req.user);
+    } catch (error) {
+      console.error("Could not notify support channel about Discord login:", error);
+    }
+
+    res.redirect("/");
+  },
 );
 router.get("/auth/logout", (req, res, next) => {
   req.logout((error) => {

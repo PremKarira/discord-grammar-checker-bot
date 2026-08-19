@@ -33,7 +33,10 @@ import uploadRouter, {
 import statusRouter from "./routes/status.js";
 import overviewRouter from "./routes/overview.js";
 import indexRouter from "./routes/index.js";
-import authRouter, { requireDiscordLogin } from "./routes/auth.js";
+import authRouter, {
+  requireDiscordLogin,
+  setAuthDiscordClient,
+} from "./routes/auth.js";
 
 const client = new Client({
   intents: [
@@ -48,6 +51,7 @@ const client = new Client({
 });
 
 setUploadDiscordClient(client);
+setAuthDiscordClient(client);
 // const client2 = new Client({
 //   intents: [
 //     GatewayIntentBits.Guilds,
