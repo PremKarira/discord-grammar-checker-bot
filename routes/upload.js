@@ -626,6 +626,19 @@ async function processUpload(job) {
 router.get("/", async (req, res) => {
   const uploads = await getUploads();
 
+  if (!req.user) {
+    return res.send(`
+      <!doctype html>
+      <html>
+      <body style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+        <h2>Authentication Required</h2>
+        <p>Please login with Discord to upload files.</p>
+        <a href="/auth/discord" style="padding: 10px 20px; background: #5865f2; color: white; text-decoration: none; border-radius: 5px;">Login with Discord</a>
+      </body>
+      </html>
+    `);
+  }
+
   const rows = uploads
     .map(
       (upload) =>
@@ -761,6 +774,8 @@ router.get("/", async (req, res) => {
         <input
           name="username"
           placeholder="Discord username"
+          value="${escapeHTML(req.user?.username || req.user?.global_name || "Unknown") }"
+          readonly
           required
         >
 
@@ -998,6 +1013,15 @@ router.get(
  */
 router.post(
   "/",
+  (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "Login with Discord before uploading.",
+      });
+    }
+
+    next();
+  },
   upload.single("file"),
   (req, res) => {
     if (!req.file) {
@@ -1013,10 +1037,9 @@ router.post(
     const mode =
       req.body.mode || "parts";
 
-    const username =
-      String(
-        req.body.username || "",
-      ).trim();
+    const username = String(
+      req.user.username || req.user.global_name || req.user.id,
+    ).trim();
 
     if (
       !username ||

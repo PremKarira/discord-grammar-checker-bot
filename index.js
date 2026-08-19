@@ -33,6 +33,7 @@ import uploadRouter, {
 import statusRouter from "./routes/status.js";
 import overviewRouter from "./routes/overview.js";
 import indexRouter from "./routes/index.js";
+import authRouter from "./routes/auth.js";
 
 const client = new Client({
   intents: [
@@ -163,6 +164,7 @@ client.on("interactionCreate", async (interaction) => {
 
 const app = express();
 
+app.use(authRouter);
 app.use("/", indexRouter);
 app.use("/upload", uploadRouter);
 app.use("/status", statusRouter);
