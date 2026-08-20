@@ -67,6 +67,11 @@ router.use(
     secret: process.env.SESSION_SECRET || "change-this-session-secret",
     resave: false,
     saveUninitialized: false,
+    proxy: true,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
   }),
 );
 router.use(passport.initialize());
