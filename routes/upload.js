@@ -41,9 +41,7 @@ async function waitForDiscordClient() {
     const timeout = setTimeout(() => {
       cleanup();
       reject(
-        new Error(
-          "Discord client did not become ready within 60 seconds.",
-        ),
+        new Error("Discord client did not become ready within 60 seconds."),
       );
     }, 60_000);
 
@@ -120,11 +118,7 @@ function runFFmpeg(args, { allowFailure = false } = {}) {
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath, [
-      "-hide_banner",
-      "-y",
-      ...args,
-    ]);
+    const child = spawn(ffmpegPath, ["-hide_banner", "-y", ...args]);
 
     let output = "";
 
@@ -140,74 +134,45 @@ function runFFmpeg(args, { allowFailure = false } = {}) {
       }
 
       return reject(
-        new Error(
-          `FFmpeg failed (exit ${code}): ${output.slice(-1200)}`,
-        ),
+        new Error(`FFmpeg failed (exit ${code}): ${output.slice(-1200)}`),
       );
     });
   });
 }
 
 async function getVideoDuration(filePath) {
-  const output = await runFFmpeg(
-    [
-      "-i",
-      filePath,
-      "-f",
-      "null",
-      "-",
-    ],
-    {
-      allowFailure: true,
-    },
-  );
+  const output = await runFFmpeg(["-i", filePath, "-f", "null", "-"], {
+    allowFailure: true,
+  });
 
-  const match = output.match(
-    /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/i,
-  );
+  const match = output.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/i);
 
   if (!match) {
     throw new Error("Could not read the video duration.");
   }
 
-  return (
-    Number(match[1]) * 3600 +
-    Number(match[2]) * 60 +
-    Number(match[3])
-  );
+  return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
 }
 
 /**
  * Upload a file to Catbox.
  */
-async function uploadFileToCatbox(
-  filePath,
-  filename,
-  contentType,
-) {
+async function uploadFileToCatbox(filePath, filename, contentType) {
   const form = new FormData();
 
   form.append("reqtype", "fileupload");
 
-  form.append(
-    "fileToUpload",
-    fs.createReadStream(filePath),
-    {
-      filename,
-      contentType,
-    },
-  );
+  form.append("fileToUpload", fs.createReadStream(filePath), {
+    filename,
+    contentType,
+  });
 
-  const response = await axios.post(
-    "https://catbox.moe/user/api.php",
-    form,
-    {
-      headers: form.getHeaders(),
-      timeout: 10 * 60 * 1000,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-    },
-  );
+  const response = await axios.post("https://catbox.moe/user/api.php", form, {
+    headers: form.getHeaders(),
+    timeout: 10 * 60 * 1000,
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+  });
 
   const url = String(response.data).trim();
 
@@ -257,38 +222,23 @@ async function normalizeVideo(sourcePath, outputPath) {
  * Create parts that are each <= 30 MiB.
  */
 async function createVideoParts(sourcePath, directory) {
-  const normalizedPath = path.join(
-    directory,
-    "normalized.mp4",
-  );
+  const normalizedPath = path.join(directory, "normalized.mp4");
 
-  await normalizeVideo(
-    sourcePath,
-    normalizedPath,
-  );
+  await normalizeVideo(sourcePath, normalizedPath);
 
-  const duration = await getVideoDuration(
-    normalizedPath,
-  );
+  const duration = await getVideoDuration(normalizedPath);
 
-  const normalizedSize =
-    fs.statSync(normalizedPath).size;
+  const normalizedSize = fs.statSync(normalizedPath).size;
 
   /*
    * Start at 90% of the maximum to leave some safety
    * margin for keyframe/container overhead.
    */
-  const targetSize = Math.floor(
-    MAX_PART_SIZE * 0.9,
-  );
+  const targetSize = Math.floor(MAX_PART_SIZE * 0.9);
 
   let segmentDuration = Math.max(
     2,
-    Math.min(
-      900,
-      (duration * targetSize) /
-        normalizedSize,
-    ),
+    Math.min(900, (duration * targetSize) / normalizedSize),
   );
 
   const parts = [];
@@ -296,19 +246,14 @@ async function createVideoParts(sourcePath, directory) {
   let start = 0;
 
   while (start < duration - 0.05) {
-    let candidateDuration = Math.min(
-      segmentDuration,
-      duration - start,
-    );
+    let candidateDuration = Math.min(segmentDuration, duration - start);
 
     let outputPath;
 
     for (;;) {
       outputPath = path.join(
         directory,
-        `part-${String(
-          parts.length + 1,
-        ).padStart(3, "0")}.mp4`,
+        `part-${String(parts.length + 1).padStart(3, "0")}.mp4`,
       );
 
       await runFFmpeg([
@@ -333,8 +278,7 @@ async function createVideoParts(sourcePath, directory) {
         outputPath,
       ]);
 
-      const outputSize =
-        fs.statSync(outputPath).size;
+      const outputSize = fs.statSync(outputPath).size;
 
       if (outputSize <= MAX_PART_SIZE) {
         break;
@@ -347,9 +291,7 @@ async function createVideoParts(sourcePath, directory) {
       candidateDuration *= 0.7;
 
       if (candidateDuration < 1) {
-        throw new Error(
-          "Could not create a video part below 30 MiB.",
-        );
+        throw new Error("Could not create a video part below 30 MiB.");
       }
     }
 
@@ -357,10 +299,7 @@ async function createVideoParts(sourcePath, directory) {
 
     start += candidateDuration;
 
-    segmentDuration = Math.min(
-      segmentDuration,
-      candidateDuration,
-    );
+    segmentDuration = Math.min(segmentDuration, candidateDuration);
   }
 
   return parts;
@@ -369,38 +308,22 @@ async function createVideoParts(sourcePath, directory) {
 /**
  * Send generated URLs to Discord.
  */
-async function sendLinksToDiscord({
-  filename,
-  username,
-  urls,
-}) {
-  const channelId =
-    process.env.SUPPORT_CHANNEL_ID;
+async function sendLinksToDiscord({ filename, username, urls }) {
+  const channelId = process.env.SUPPORT_CHANNEL_ID;
 
   if (!channelId) {
-    throw new Error(
-      "SUPPORT_CHANNEL_ID is not configured.",
-    );
+    throw new Error("SUPPORT_CHANNEL_ID is not configured.");
   }
 
   await waitForDiscordClient();
 
-  const channel =
-    await discordClient.channels.fetch(
-      channelId,
-    );
+  const channel = await discordClient.channels.fetch(channelId);
 
   if (!channel?.isTextBased()) {
-    throw new Error(
-      "SUPPORT_CHANNEL_ID does not refer to a text channel.",
-    );
+    throw new Error("SUPPORT_CHANNEL_ID does not refer to a text channel.");
   }
 
-  for (
-    let index = 0;
-    index < urls.length;
-    index++
-  ) {
+  for (let index = 0; index < urls.length; index++) {
     await channel.send({
       content:
         `**${filename}** — uploaded by ${username} — ` +
@@ -416,16 +339,8 @@ async function sendLinksToDiscord({
  * Process an uploaded file.
  */
 async function processUpload(job) {
-  const {
-    hex,
-    filename,
-    username,
-    type,
-    mode,
-    sourcePath,
-    directory,
-    size,
-  } = job;
+  const { hex, filename, username, type, mode, sourcePath, directory, size } =
+    job;
 
   jobs.set(hex, {
     ...job,
@@ -451,26 +366,15 @@ async function processUpload(job) {
        * Normalize the video and allow up to 200 MiB.
        */
       if (mode === "single") {
-        const normalizedPath = path.join(
-          directory,
-          "normalized.mp4",
-        );
+        const normalizedPath = path.join(directory, "normalized.mp4");
 
-        await normalizeVideo(
-          sourcePath,
-          normalizedPath,
-        );
+        await normalizeVideo(sourcePath, normalizedPath);
 
-        const normalizedSize =
-          fs.statSync(normalizedPath).size;
+        const normalizedSize = fs.statSync(normalizedPath).size;
 
         if (normalizedSize > MAX_SINGLE_SIZE) {
           throw new Error(
-            `The processed video is ${(
-              normalizedSize /
-              1024 /
-              1024
-            ).toFixed(
+            `The processed video is ${(normalizedSize / 1024 / 1024).toFixed(
               1,
             )} MiB, which is larger than the 200 MiB single-file limit. Choose "Split into parts" instead.`,
           );
@@ -483,11 +387,7 @@ async function processUpload(job) {
        * PARTS MODE
        */
       else {
-        partPaths =
-          await createVideoParts(
-            sourcePath,
-            directory,
-          );
+        partPaths = await createVideoParts(sourcePath, directory);
       }
     }
 
@@ -495,13 +395,10 @@ async function processUpload(job) {
      * IMAGE
      */
     else {
-      const imageSize =
-        fs.statSync(sourcePath).size;
+      const imageSize = fs.statSync(sourcePath).size;
 
       if (imageSize > MAX_PART_SIZE) {
-        throw new Error(
-          "Images must be smaller than 30 MiB.",
-        );
+        throw new Error("Images must be smaller than 30 MiB.");
       }
 
       partPaths = [sourcePath];
@@ -516,50 +413,31 @@ async function processUpload(job) {
           : `Uploading ${partPaths.length} parts to Catbox...`,
     });
 
-    const baseName = path.basename(
-      filename,
-      path.extname(filename),
-    );
+    const baseName = path.basename(filename, path.extname(filename));
 
-    const extension =
-      type === "video"
-        ? ".mp4"
-        : path.extname(filename);
+    const extension = type === "video" ? ".mp4" : path.extname(filename);
 
     const contentType =
-      type === "video"
-        ? "video/mp4"
-        : "application/octet-stream";
+      type === "video" ? "video/mp4" : "application/octet-stream";
 
     const urls = [];
 
-    for (
-      let index = 0;
-      index < partPaths.length;
-      index++
-    ) {
+    for (let index = 0; index < partPaths.length; index++) {
       const catboxName =
         partPaths.length === 1
           ? type === "video"
             ? `${baseName}.mp4`
             : filename
-          : `${baseName}-part-${
-              index + 1
-            }${extension}`;
+          : `${baseName}-part-${index + 1}${extension}`;
 
       urls.push(
-        await uploadFileToCatbox(
-          partPaths[index],
-          catboxName,
-          contentType,
-        ),
+        await uploadFileToCatbox(partPaths[index], catboxName, contentType),
       );
 
       jobs.set(hex, {
         ...jobs.get(hex),
         status: "uploading",
-        message:
-          `Uploaded ${index + 1}/${partPaths.length} file(s) to Catbox...`,
+        message: `Uploaded ${index + 1}/${partPaths.length} file(s) to Catbox...`,
       });
     }
 
@@ -581,8 +459,7 @@ async function processUpload(job) {
     jobs.set(hex, {
       ...jobs.get(hex),
       status: "sending",
-      message:
-        "Sending links to Discord...",
+      message: "Sending links to Discord...",
       parts: urls,
     });
 
@@ -598,22 +475,16 @@ async function processUpload(job) {
     jobs.set(hex, {
       ...jobs.get(hex),
       status: "complete",
-      message:
-        "Upload complete. Links were sent to Discord.",
+      message: "Upload complete. Links were sent to Discord.",
       parts: urls,
     });
   } catch (error) {
-    console.error(
-      `Upload ${hex} failed:`,
-      error,
-    );
+    console.error(`Upload ${hex} failed:`, error);
 
     jobs.set(hex, {
       ...jobs.get(hex),
       status: "failed",
-      message:
-        error?.message ||
-        "Upload processing failed.",
+      message: error?.message || "Upload processing failed.",
     });
   } finally {
     removeDirectory(directory);
@@ -623,6 +494,7 @@ async function processUpload(job) {
 /**
  * Upload page.
  */
+
 router.get("/", async (req, res) => {
   const uploads = await getUploads();
 
@@ -630,10 +502,13 @@ router.get("/", async (req, res) => {
     return res.send(`
       <!doctype html>
       <html>
-      <body style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+      <body style="text-align:center;margin-top:50px;font-family:Arial,sans-serif;">
         <h2>Authentication Required</h2>
         <p>Please login with Discord to upload files.</p>
-        <a href="/auth/discord" style="padding: 10px 20px; background: #5865f2; color: white; text-decoration: none; border-radius: 5px;">Login with Discord</a>
+        <a href="/auth/discord"
+          style="padding:10px 20px;background:#5865f2;color:white;text-decoration:none;border-radius:5px;">
+          Login with Discord
+        </a>
       </body>
       </html>
     `);
@@ -641,245 +516,346 @@ router.get("/", async (req, res) => {
 
   const rows = uploads
     .map(
-      (upload) =>
-        `<tr>
-          <td>${escapeHTML(
-            upload.hex,
-          )}</td>
-
-          <td>${escapeHTML(
-            upload.filename,
-          )}</td>
-
-          <td>${escapeHTML(
-            upload.username,
-          )}</td>
-
-          <td>${escapeHTML(
-            upload.mode || "parts",
-          )}</td>
-
+      (upload) => `
+        <tr>
+          <td>${escapeHTML(upload.hex)}</td>
+          <td>${escapeHTML(upload.filename)}</td>
+          <td>${escapeHTML(upload.username)}</td>
+          <td>${escapeHTML(upload.mode || "parts")}</td>
           <td>${upload.partCount || 0}</td>
-
           <td>
             <a
-              href="${escapeHTML(
-                upload.parts?.[0] || "#",
-              )}"
+              href="${escapeHTML(upload.parts?.[0] || "#")}"
               target="_blank"
               rel="noreferrer"
             >
               Open
             </a>
           </td>
-        </tr>`,
+        </tr>
+      `,
     )
     .join("");
 
   res.send(`
 <!doctype html>
-
 <html>
 <head>
-  <title>Upload file</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Upload File</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
+      margin: 0;
+      padding: 30px;
       background: #121212;
       color: #eee;
-      font: 16px Arial, sans-serif;
-      padding: 30px;
+      font: 15px Arial, sans-serif;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: auto;
+    }
+
+    h1, h2 {
+      margin-top: 0;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
     }
 
     .card {
       background: #181818;
-      padding: 20px;
+      border: 1px solid #292929;
       border-radius: 10px;
-      margin-bottom: 20px;
+      padding: 20px;
+    }
+
+    .upload-card {
+      position: sticky;
+      top: 20px;
     }
 
     input,
     select,
     button {
+      width: 100%;
       background: #1e1e1e;
       color: #fff;
       border: 1px solid #444;
       padding: 10px;
       border-radius: 6px;
-      margin: 5px;
+      margin-bottom: 10px;
+    }
+
+    input[readonly] {
+      color: #aaa;
     }
 
     button {
       background: #5865f2;
       border: 0;
       cursor: pointer;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+
+    button:hover {
+      background: #4752c4;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .progress {
       height: 18px;
-      background: #333;
+      background: #303030;
       border-radius: 5px;
       overflow: hidden;
+      margin-top: 15px;
     }
 
     .bar {
       height: 100%;
       width: 0;
       background: #5865f2;
+      transition: width 0.2s;
+    }
+
+    #status {
+      color: #aaa;
+      min-height: 20px;
+      margin-bottom: 0;
+    }
+
+    .hint {
+      color: #888;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
+      min-width: 650px;
     }
 
     td,
     th {
-      border: 1px solid #444;
-      padding: 8px;
+      border-bottom: 1px solid #333;
+      padding: 10px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
     }
 
     a {
       color: #55b7ff;
+      text-decoration: none;
     }
 
-    .hint {
-      color: #aaa;
-      font-size: 14px;
-      margin: 8px 5px;
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      color: #888;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+    }
+
+    .count {
+      color: #888;
+      font-size: 13px;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        padding: 15px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .upload-card {
+        position: static;
+      }
     }
   </style>
 </head>
 
 <body>
-
   <div class="container">
 
-    <div class="card">
+    <div class="layout">
 
-      <h1>Upload file</h1>
+      <!-- LEFT: Upload -->
+      <div class="card upload-card">
 
-      <p>
-        Videos are processed on the server after upload.
-        You may close this page once it says the job is queued.
-      </p>
+        <h1>Upload File</h1>
 
-      <form id="uploadForm">
+        <p class="hint">
+          Upload a video or image. Videos can either be split into
+          30 MiB parts or processed as a single file up to 200 MiB.
+        </p>
 
-        <input
-          name="username"
-          placeholder="Discord username"
-          value="${escapeHTML(req.user?.username || req.user?.global_name || "Unknown") }"
-          readonly
-          required
-        >
+        <form id="uploadForm">
 
-        <input
-          name="file"
-          type="file"
-          required
-        >
+          <input
+            name="username"
+            value="${escapeHTML(
+              req.user?.username ||
+              req.user?.global_name ||
+              "Unknown"
+            )}"
+            readonly
+            required
+          >
 
-        <select name="type" id="typeSelect">
-          <option value="video">
-            Video
-          </option>
+          <input
+            name="file"
+            type="file"
+            required
+          >
 
-          <option value="image">
-            Image
-          </option>
-        </select>
+          <select name="type" id="typeSelect">
+            <option value="video">Video</option>
+            <option value="image">Image</option>
+          </select>
 
-        <select name="mode" id="modeSelect">
-          <option value="parts">
-            Split into parts (30 MiB each)
-          </option>
+          <select name="mode" id="modeSelect">
+            <option value="parts">
+              Split into parts (30 MiB each)
+            </option>
 
-          <option value="single">
-            Single file (up to 200 MiB)
-          </option>
-        </select>
+            <option value="single">
+              Single file (up to 200 MiB)
+            </option>
+          </select>
 
-        <button>
-          Upload
-        </button>
+          <button id="uploadButton" type="submit">
+            Upload
+          </button>
 
-      </form>
+        </form>
 
-      <p class="hint" id="modeHint">
-        Split mode divides the video into multiple files,
-        each no larger than 30 MiB.
-      </p>
+        <p class="hint" id="modeHint">
+          Split mode divides the video into multiple files,
+          each no larger than 30 MiB.
+        </p>
 
-      <div class="progress">
-        <div
-          id="bar"
-          class="bar"
-        ></div>
+        <div class="progress">
+          <div id="bar" class="bar"></div>
+        </div>
+
+        <p id="status"></p>
+
       </div>
 
-      <p id="status"></p>
 
-    </div>
+      <!-- RIGHT: Completed uploads -->
+      <div class="card">
 
-    <div class="card">
+        <div class="section-title">
+          <h2>Completed Uploads</h2>
+          <span class="count">${uploads.length} total</span>
+        </div>
 
-      <h2>Completed uploads</h2>
+        <div class="table-wrapper">
 
-      <table>
+          <table>
+            <thead>
+              <tr>
+                <th>Hex</th>
+                <th>File</th>
+                <th>User</th>
+                <th>Mode</th>
+                <th>Parts</th>
+                <th>Link</th>
+              </tr>
+            </thead>
 
-        <tr>
-          <th>Hex</th>
-          <th>File</th>
-          <th>User</th>
-          <th>Mode</th>
-          <th>Parts</th>
-          <th>Link</th>
-        </tr>
+            <tbody>
+              ${
+                rows ||
+                `
+                  <tr>
+                    <td colspan="6" class="empty">
+                      No uploads yet
+                    </td>
+                  </tr>
+                `
+              }
+            </tbody>
 
-        ${
-          rows ||
-          "<tr><td colspan='6'>No uploads yet</td></tr>"
-        }
+          </table>
 
-      </table>
+        </div>
+
+      </div>
 
     </div>
 
   </div>
 
+
   <script>
-    const form =
-      document.querySelector("#uploadForm");
+    const form = document.querySelector("#uploadForm");
+    const status = document.querySelector("#status");
+    const bar = document.querySelector("#bar");
+    const typeSelect = document.querySelector("#typeSelect");
+    const modeSelect = document.querySelector("#modeSelect");
+    const modeHint = document.querySelector("#modeHint");
+    const uploadButton = document.querySelector("#uploadButton");
 
-    const status =
-      document.querySelector("#status");
-
-    const bar =
-      document.querySelector("#bar");
-
-    const typeSelect =
-      document.querySelector("#typeSelect");
-
-    const modeSelect =
-      document.querySelector("#modeSelect");
-
-    const modeHint =
-      document.querySelector("#modeHint");
 
     function updateModeUI() {
       if (typeSelect.value === "image") {
+
         modeSelect.value = "single";
         modeSelect.disabled = true;
 
         modeHint.textContent =
           "Images are uploaded as a single file and must be smaller than 30 MiB.";
+
       } else {
+
         modeSelect.disabled = false;
 
         if (modeSelect.value === "single") {
@@ -892,87 +868,156 @@ router.get("/", async (req, res) => {
       }
     }
 
-    typeSelect.addEventListener(
-      "change",
-      updateModeUI,
-    );
 
-    modeSelect.addEventListener(
-      "change",
-      updateModeUI,
-    );
+    typeSelect.addEventListener("change", updateModeUI);
+    modeSelect.addEventListener("change", updateModeUI);
 
     updateModeUI();
 
-    form.addEventListener(
-      "submit",
-      (event) => {
-        event.preventDefault();
 
-        bar.style.width = "0%";
+    async function monitorJob(hex) {
+
+      const interval = setInterval(async () => {
+
+        try {
+
+          const response =
+            await fetch("/upload/status/" + encodeURIComponent(hex));
+
+          if (!response.ok) {
+            return;
+          }
+
+          const data = await response.json();
+
+          status.textContent = data.message || data.status;
+
+          if (data.status === "complete") {
+
+            clearInterval(interval);
+
+            bar.style.width = "100%";
+
+            status.textContent =
+              "Upload complete. Links have been sent to Discord.";
+
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload";
+
+          }
+
+          if (data.status === "failed") {
+
+            clearInterval(interval);
+
+            status.textContent =
+              "Upload failed: " + data.message;
+
+            bar.style.width = "0%";
+
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload";
+
+          }
+
+        } catch (error) {
+          console.error("Status check failed:", error);
+        }
+
+      }, 2000);
+    }
+
+
+    form.addEventListener("submit", (event) => {
+
+      event.preventDefault();
+
+      bar.style.width = "0%";
+
+      status.textContent =
+        "Uploading to server...";
+
+      uploadButton.disabled = true;
+      uploadButton.textContent = "Uploading...";
+
+
+      const request = new XMLHttpRequest();
+
+      request.open("POST", "/upload");
+
+
+      request.upload.onprogress = (event) => {
+
+        if (event.lengthComputable) {
+
+          const percent =
+            (event.loaded / event.total) * 100;
+
+          bar.style.width =
+            percent + "%";
+
+          status.textContent =
+            "Uploading to server: " +
+            Math.round(percent) +
+            "%";
+        }
+
+      };
+
+
+      request.onload = () => {
+
+        try {
+
+          const data =
+            JSON.parse(request.responseText);
+
+          if (request.status === 202) {
+
+            bar.style.width = "100%";
+
+            status.textContent =
+              "Upload received. Processing...";
+
+            monitorJob(data.hex);
+
+          } else {
+
+            status.textContent =
+              data.error || "Upload failed.";
+
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload";
+          }
+
+        } catch {
+
+          status.textContent =
+            request.responseText ||
+            "Upload failed.";
+
+          uploadButton.disabled = false;
+          uploadButton.textContent = "Upload";
+        }
+
+      };
+
+
+      request.onerror = () => {
 
         status.textContent =
-          "Uploading to server...";
+          "Network error during upload.";
 
-        const request =
-          new XMLHttpRequest();
+        uploadButton.disabled = false;
+        uploadButton.textContent = "Upload";
 
-        request.open(
-          "POST",
-          "/upload",
-        );
+      };
 
-        request.upload.onprogress =
-          (event) => {
-            if (event.lengthComputable) {
-              const percent =
-                (event.loaded /
-                  event.total) *
-                100;
 
-              bar.style.width =
-                percent + "%";
+      request.send(new FormData(form));
 
-              status.textContent =
-                "Uploading to server: " +
-                Math.round(percent) +
-                "%";
-            }
-          };
+    });
 
-        request.onload = () => {
-          try {
-            const data =
-              JSON.parse(
-                request.responseText,
-              );
-
-            if (request.status === 202) {
-              status.textContent =
-                "Queued. Server will process it and send the links to Discord. Upload ID: " +
-                data.hex;
-            } else {
-              status.textContent =
-                data.error ||
-                "Upload failed.";
-            }
-          } catch {
-            status.textContent =
-              request.responseText ||
-              "Upload failed.";
-          }
-        };
-
-        request.onerror = () => {
-          status.textContent =
-            "Network error during upload.";
-        };
-
-        request.send(
-          new FormData(form),
-        );
-      },
-    );
   </script>
 
 </body>
@@ -980,33 +1025,27 @@ router.get("/", async (req, res) => {
   `);
 });
 
+
 /**
  * Job status.
  */
-router.get(
-  "/status/:hex",
-  (req, res) => {
-    const job =
-      jobs.get(req.params.hex);
+router.get("/status/:hex", (req, res) => {
+  const job = jobs.get(req.params.hex);
 
-    if (!job) {
-      return res
-        .status(404)
-        .json({
-          error:
-            "Upload job not found.",
-        });
-    }
-
-    return res.json({
-      hex: job.hex,
-      status: job.status,
-      message: job.message,
-      mode: job.mode,
-      parts: job.parts || [],
+  if (!job) {
+    return res.status(404).json({
+      error: "Upload job not found.",
     });
-  },
-);
+  }
+
+  return res.json({
+    hex: job.hex,
+    status: job.status,
+    message: job.message,
+    mode: job.mode,
+    parts: job.parts || [],
+  });
+});
 
 /**
  * Receive upload.
@@ -1025,17 +1064,14 @@ router.post(
   upload.single("file"),
   (req, res) => {
     if (!req.file) {
-      return res
-        .status(400)
-        .json({
-          error: "Select a file.",
-        });
+      return res.status(400).json({
+        error: "Select a file.",
+      });
     }
 
     const type = req.body.type;
 
-    const mode =
-      req.body.mode || "parts";
+    const mode = req.body.mode || "parts";
 
     const username = String(
       req.user.username || req.user.global_name || req.user.id,
@@ -1043,51 +1079,32 @@ router.post(
 
     if (
       !username ||
-      !["video", "image"].includes(
-        type,
-      ) ||
-      !["single", "parts"].includes(
-        mode,
-      )
+      !["video", "image"].includes(type) ||
+      !["single", "parts"].includes(mode)
     ) {
-      removeDirectory(
-        req.file.destination,
-      );
+      removeDirectory(req.file.destination);
 
-      return res
-        .status(400)
-        .json({
-          error:
-            "A username, valid file type, and valid upload mode are required.",
-        });
+      return res.status(400).json({
+        error:
+          "A username, valid file type, and valid upload mode are required.",
+      });
     }
 
     /**
      * Images don't support splitting.
      */
-    if (
-      type === "image" &&
-      mode !== "single"
-    ) {
-      removeDirectory(
-        req.file.destination,
-      );
+    if (type === "image" && mode !== "single") {
+      removeDirectory(req.file.destination);
 
-      return res
-        .status(400)
-        .json({
-          error:
-            "Images can only be uploaded as a single file.",
-        });
+      return res.status(400).json({
+        error: "Images can only be uploaded as a single file.",
+      });
     }
 
     const job = {
       hex: req.uploadHex,
 
-      filename:
-        path.basename(
-          req.file.originalname,
-        ),
+      filename: path.basename(req.file.originalname),
 
       username,
 
@@ -1095,69 +1112,44 @@ router.post(
 
       mode,
 
-      sourcePath:
-        req.file.path,
+      sourcePath: req.file.path,
 
-      directory:
-        req.file.destination,
+      directory: req.file.destination,
 
-      size:
-        req.file.size,
+      size: req.file.size,
 
       status: "queued",
 
-      message:
-        "Upload received. Waiting for server processing.",
+      message: "Upload received. Waiting for server processing.",
     };
 
-    jobs.set(
-      job.hex,
-      job,
-    );
+    jobs.set(job.hex, job);
 
     res.status(202).json({
       hex: job.hex,
       status: "queued",
-      statusUrl:
-        `/upload/status/${job.hex}`,
+      statusUrl: `/upload/status/${job.hex}`,
     });
 
-    setImmediate(() =>
-      void processUpload(job),
-    );
+    setImmediate(() => void processUpload(job));
   },
 );
 
 /**
  * Multer / upload errors.
  */
-router.use(
-  (error, req, res, next) => {
-    if (
-      error instanceof
-        multer.MulterError &&
-      error.code ===
-        "LIMIT_FILE_SIZE"
-    ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "File is larger than the 1 GiB limit.",
-        });
-    }
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      error: "File is larger than the 1 GiB limit.",
+    });
+  }
 
-    console.error(
-      "Upload route error:",
-      error,
-    );
+  console.error("Upload route error:", error);
 
-    return res
-      .status(500)
-      .json({
-        error: "Upload failed.",
-      });
-  },
-);
+  return res.status(500).json({
+    error: "Upload failed.",
+  });
+});
 
 export default router;
