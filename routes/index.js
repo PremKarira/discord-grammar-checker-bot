@@ -1,10 +1,5 @@
 import { Router } from "express";
-import edmRouter from "./edm.js";
-
 const router = Router();
-
-router.use("/legacy-edm-shuffle", edmRouter);
-
 router.get("/", (req, res) => {
   const pageContent = req.user
     ? `

@@ -2,6 +2,14 @@ import express from "express";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as DiscordStrategy } from "passport-discord";
+import { EventEmitter } from "node:events";
+
+import {
+  getSession,
+  saveSession,
+  destroySession,
+  touchSession,
+} from "../config/db.js";
 
 const router = express.Router();
 let discordClient = null;
@@ -61,14 +69,58 @@ passport.use(
     (accessToken, refreshToken, profile, done) => done(null, profile),
   ),
 );
+class MongoSessionStore extends session.Store {
+  get(sid, callback) {
+    getSession(sid)
+      .then((doc) => {
+        if (!doc) {
+          return callback(null, null);
+        }
 
+        if (doc.expires && new Date(doc.expires) <= new Date()) {
+          return destroySession(sid)
+            .then(() => callback(null, null))
+            .catch(callback);
+        }
+
+        callback(null, doc.session);
+      })
+      .catch(callback);
+  }
+
+  set(sid, sessionData, callback) {
+    const expires = sessionData?.cookie?.expires;
+
+    saveSession(sid, sessionData, expires)
+      .then(() => callback(null))
+      .catch(callback);
+  }
+
+  destroy(sid, callback) {
+    destroySession(sid)
+      .then(() => callback(null))
+      .catch(callback);
+  }
+
+  touch(sid, sessionData, callback) {
+    const expires = sessionData?.cookie?.expires;
+
+    touchSession(sid, expires)
+      .then(() => callback(null))
+      .catch(callback);
+  }
+}
+
+const mongoSessionStore = new MongoSessionStore();
 router.use(
   session({
     secret: process.env.SESSION_SECRET || "change-this-session-secret",
     resave: false,
     saveUninitialized: false,
     proxy: true,
+    store: mongoSessionStore,
     cookie: {
+      maxAge: 14 * 24 * 60 * 60 * 1000,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
@@ -85,7 +137,10 @@ router.get(
     try {
       await notifySupportChannel(req, req.user);
     } catch (error) {
-      console.error("Could not notify support channel about Discord login:", error);
+      console.error(
+        "Could not notify support channel about Discord login:",
+        error,
+      );
     }
 
     res.redirect("/v1");
