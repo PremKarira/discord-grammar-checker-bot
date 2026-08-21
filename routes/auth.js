@@ -88,7 +88,7 @@ router.get(
       console.error("Could not notify support channel about Discord login:", error);
     }
 
-    res.redirect("/");
+    res.redirect("/v1");
   },
 );
 router.get("/auth/logout", (req, res, next) => {
@@ -100,7 +100,7 @@ router.get("/auth/logout", (req, res, next) => {
 
 export function requireDiscordLogin(req, res, next) {
   if (req.user) return next();
-  return res.redirect("/");
+  return res.redirect("/v1");
 }
 
 export default router;

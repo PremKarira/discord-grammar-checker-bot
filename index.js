@@ -27,6 +27,8 @@ import { handleDoButtons } from "./commands/doCommand.js";
 import { setupErrorHandler } from "./utils/errorHandler.js";
 import { logToSupport } from "./commands/doCommand.js";
 
+
+import edmRouter from "./routes/edm.js";
 import uploadRouter, {
   setUploadDiscordClient,
 } from "./routes/upload.js";
@@ -167,9 +169,9 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 const app = express();
-
+app.use("/legacy-edm-shuffle", edmRouter);
 app.use(authRouter);
-app.use("/", indexRouter);
+app.use("/v1", indexRouter);
 app.use("/upload", requireDiscordLogin, uploadRouter);
 app.use("/status", requireDiscordLogin, statusRouter);
 app.use("/overview", requireDiscordLogin, overviewRouter);

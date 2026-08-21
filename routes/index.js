@@ -1,6 +1,9 @@
 import { Router } from "express";
+import edmRouter from "./edm.js";
 
 const router = Router();
+
+router.use("/legacy-edm-shuffle", edmRouter);
 
 router.get("/", (req, res) => {
   const pageContent = req.user
@@ -32,6 +35,30 @@ router.get("/", (req, res) => {
             font: 16px Arial, sans-serif;
             padding: 30px;
             text-align: center;
+          }
+          .icon-btn {
+            align-items: center;
+            background: #5865f2;
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            height: 44px;
+            justify-content: center;
+            position: fixed;
+            right: 22px;
+            text-decoration: none;
+            top: 22px;
+            transition: background 0.2s, transform 0.2s;
+            width: 44px;
+            z-index: 10;
+          }
+          .icon-btn:hover {
+            background: #4752c4;
+            transform: translateY(-1px);
+          }
+          .icon-btn svg {
+            height: 22px;
+            width: 22px;
           }
           .container {
             max-width: 900px;
@@ -66,6 +93,14 @@ router.get("/", (req, res) => {
         </style>
       </head>
       <body>
+        <a class="icon-btn" href="/legacy-edm-shuffle" aria-label="Legacy EDM Shuffle" title="Legacy EDM Shuffle">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18.7 10 16 6H8l-2.7 4-1.8 1.1C2.7 11.3 2 12.1 2 13v3c0 .6.4 1 1 1h2"></path>
+            <circle cx="7" cy="17" r="2"></circle>
+            <circle cx="17" cy="17" r="2"></circle>
+            <path d="M9 10h6"></path>
+          </svg>
+        </a>
         <div class="container">
           ${pageContent}
         </div>
