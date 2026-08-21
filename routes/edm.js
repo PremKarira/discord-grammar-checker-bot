@@ -14,16 +14,6 @@ const VEHICLE_JSON_URL = "https://edm.shrt.day/json";
 
 const IMAGE_BASE_URL = "https://edm.shrt.day/images";
 
-// ============================================================
-// CACHE SETTINGS
-// ============================================================
-
-// 10 minutes is now only a fallback.
-// Normal refreshes happen when a shuffle's `next` is reached.
-const CACHE_TTL = 10 * 60 * 1000;
-
-const FAILED_REFRESH_COOLDOWN = 60 * 1000;
-
 const REQUEST_TIMEOUT = 15 * 1000;
 
 const MAX_RETRIES = 3;
@@ -41,8 +31,6 @@ let cache = {
 let cacheUpdatedAt = null;
 
 let cachePromise = null;
-
-let lastRefreshAttemptAt = 0;
 
 let mongoCacheLoaded = false;
 
@@ -328,8 +316,6 @@ const refreshCache = async ({
   }
 
   cachePromise = (async () => {
-    lastRefreshAttemptAt = Date.now();
-
     /*
      * Initial startup:
      *
@@ -488,27 +474,18 @@ const getCachedData = async () => {
    * SHUFFLE-BASED REFRESH
    * ========================================================
    *
-   * This is the PRIMARY refresh mechanism.
-   *
    * EDM and Special Imports are checked
    * independently.
+   *
+   * There is NO 10-minute TTL/fallback refresh.
    */
 
   const { refreshEdm, refreshSpecialImports } = getRequiredRefreshes();
 
   if (refreshEdm || refreshSpecialImports) {
     /*
-     * IMPORTANT:
-     *
-     * We intentionally do NOT use the
-     * 10-minute cooldown here.
-     *
      * Once the shuffle timestamp is reached,
-     * we immediately attempt the refresh.
-     *
-     * If it fails, the old `next` timestamp
-     * remains in memory, so the next request
-     * will try again.
+     * immediately refresh the required source(s).
      */
 
     try {
@@ -527,54 +504,15 @@ const getCachedData = async () => {
 
   /*
    * ========================================================
-   * NORMAL TTL FALLBACK
+   * CACHE STILL VALID
    * ========================================================
    *
-   * This is NOT the normal refresh mechanism.
+   * Neither shuffle is due.
    *
-   * It only exists as a safety net.
+   * Simply return the existing cache.
    */
 
-  const now = Date.now();
-
-  if (cacheUpdatedAt && now - cacheUpdatedAt < CACHE_TTL) {
-    return cache;
-  }
-
-  /*
-   * ========================================================
-   * FAILED FALLBACK COOLDOWN
-   * ========================================================
-   */
-
-  if (now - lastRefreshAttemptAt < FAILED_REFRESH_COOLDOWN) {
-    console.warn(
-      "EDM cache is stale, but fallback refresh cooldown is active. Serving cached data.",
-    );
-
-    return cache;
-  }
-
-  /*
-   * ========================================================
-   * FALLBACK REFRESH
-   * ========================================================
-   *
-   * Nothing has shuffled, but cache is
-   * older than 10 minutes.
-   *
-   * Refresh all sources.
-   */
-
-  try {
-    return await refreshCache({
-      forceAll: true,
-    });
-  } catch (error) {
-    console.error("❌ EDM fallback refresh failed:", error?.message || error);
-
-    return cache;
-  }
+  return cache;
 };
 
 // ============================================================
