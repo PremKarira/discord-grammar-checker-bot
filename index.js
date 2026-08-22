@@ -27,6 +27,10 @@ import { handleDoButtons } from "./commands/doCommand.js";
 import { setupErrorHandler } from "./utils/errorHandler.js";
 import { logToSupport } from "./commands/doCommand.js";
 
+import myProfileRouter, {
+  setMyProfileDiscordClient,
+  updateMyProfilePresence,
+} from "./routes/myprofile.js";
 
 import edmRouter from "./routes/edm.js";
 import uploadRouter, {
@@ -97,6 +101,7 @@ botStatus.forwardingEnabled = savedStatus.forwardingEnabled;
 
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+  setMyProfileDiscordClient(client);
   // startN8nStatusMonitor(client, isBotActive, botStatus);
   // await setupVoiceOnReady(client, "Client 1");
 
@@ -155,6 +160,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 client.on("presenceUpdate", async (oldPresence, newPresence) => {
+  updateMyProfilePresence(newPresence);
   if (!botStatus.voiceStateUpdate) return;
   await handlePresenceUpdate(client, oldPresence, newPresence);
 });
@@ -169,13 +175,14 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 const app = express();
+app.use("/", myProfileRouter);
 app.use("/legacy-edm-shuffle", edmRouter);
 app.use("/shuffle", edmRouter);
 app.use(authRouter);
-app.use("/v1", indexRouter);
-app.use("/upload", requireDiscordLogin, uploadRouter);
-app.use("/status", requireDiscordLogin, statusRouter);
-app.use("/overview", requireDiscordLogin, overviewRouter);
+app.use("/api/v1", indexRouter);
+app.use("/api/v1/upload", requireDiscordLogin, uploadRouter);
+app.use("/api/v1/status", requireDiscordLogin, statusRouter);
+app.use("/api/v1/overview", requireDiscordLogin, overviewRouter);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
