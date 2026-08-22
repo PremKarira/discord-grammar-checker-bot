@@ -1290,7 +1290,7 @@ body {
   </div>
 
   <div class="about">
-    Developer • Discord Bot Developer • Gamer
+    Developer • Gamer
   </div>
 
 </div>
