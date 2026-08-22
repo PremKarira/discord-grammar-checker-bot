@@ -170,6 +170,7 @@ client.on("interactionCreate", async (interaction) => {
 
 const app = express();
 app.use("/legacy-edm-shuffle", edmRouter);
+app.use("/shuffle", edmRouter);
 app.use(authRouter);
 app.use("/v1", indexRouter);
 app.use("/upload", requireDiscordLogin, uploadRouter);
