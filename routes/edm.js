@@ -38,26 +38,25 @@ let mongoCacheLoaded = false;
 // TIERS
 // ============================================================
 
-const tiers = [
-  {
-    name: "Respected",
-    slug: "respected",
-    start: 0,
-    end: 5,
-  },
-  {
-    name: "Heroic",
-    slug: "heroic",
-    start: 5,
-    end: 10,
-  },
-  {
-    name: "Legendary",
-    slug: "legendary",
-    start: 10,
-    end: 15,
-  },
-];
+/*
+ * Rotation position does NOT reliably indicate tier
+ * (the upstream shuffle order isn't stable).
+ *
+ * The real tier comes from which category a car is
+ * listed under in the vehicle JSON, looked up fresh
+ * on every shuffle.
+ */
+
+const CATEGORY_TIERS = {
+  "Heroic Imports": { name: "Heroic", slug: "heroic" },
+  "Respected Imports": { name: "Respected", slug: "respected" },
+  "Legendary Imports": { name: "Legendary", slug: "legendary" },
+  "Special Imports": { name: "Special", slug: "special" },
+};
+
+const TIER_DISPLAY_ORDER = ["respected", "heroic", "legendary"];
+
+const UNKNOWN_TIER = { name: "Unknown", slug: "unknown" };
 
 // ============================================================
 // GENERAL HELPERS
@@ -576,6 +575,29 @@ const findVehicleByModel = (data, modelName) => {
 };
 
 // ============================================================
+// VEHICLE TIER LOOKUP
+// ============================================================
+
+const findVehicleTier = (vehicleJsonResponse, modelName) => {
+  if (!vehicleJsonResponse || typeof vehicleJsonResponse !== "object") {
+    return null;
+  }
+
+  for (const [category, vehicles] of Object.entries(vehicleJsonResponse)) {
+    const vehicle = findVehicleByModel(vehicles, modelName);
+
+    if (vehicle) {
+      return {
+        vehicle,
+        tier: CATEGORY_TIERS[category] || UNKNOWN_TIER,
+      };
+    }
+  }
+
+  return null;
+};
+
+// ============================================================
 // VEHICLE DISPLAY NAME
 // ============================================================
 
@@ -747,65 +769,70 @@ router.get("/", async (req, res) => {
     // EDM SHUFFLE
     // ======================================================
 
-    const edmTierSections = tiers
-      .map((tier) => {
-        const cars = edmRotation
-          .slice(tier.start, tier.end)
-          .map((rotationModelName) => {
-            const vehicle = findVehicleByModel(
-              vehicleJsonResponse,
+    const tierGroups = new Map();
+
+    edmRotation.forEach((rotationModelName) => {
+      const found = findVehicleTier(vehicleJsonResponse, rotationModelName);
+
+      const tier = found?.tier || UNKNOWN_TIER;
+
+      const vehicle = found?.vehicle || null;
+
+      const card = vehicle
+        ? renderCarCard({
+            modelName: getVehicleDisplayName(vehicle, rotationModelName),
+
+            imageModelName: getVehicleImageModelName(
+              vehicle,
               rotationModelName,
-            );
+            ),
 
-            if (vehicle) {
-              const displayName = getVehicleDisplayName(
-                vehicle,
-                rotationModelName,
-              );
+            tier: tier.slug,
 
-              const imageModelName = getVehicleImageModelName(
-                vehicle,
-                rotationModelName,
-              );
-
-              const price = getVehiclePrice(vehicle);
-
-              return renderCarCard({
-                modelName: displayName,
-
-                imageModelName,
-
-                tier: tier.slug,
-
-                price,
-              });
-            }
-
-            return renderCarCard({
-              modelName: rotationModelName,
-
-              imageModelName: null,
-
-              tier: tier.slug,
-
-              price: null,
-            });
+            price: getVehiclePrice(vehicle),
           })
-          .join("");
+        : renderCarCard({
+            modelName: rotationModelName,
+
+            imageModelName: null,
+
+            tier: tier.slug,
+
+            price: null,
+          });
+
+      if (!tierGroups.has(tier.slug)) {
+        tierGroups.set(tier.slug, { name: tier.name, cars: [] });
+      }
+
+      tierGroups.get(tier.slug).cars.push(card);
+    });
+
+    const orderedTierSlugs = [
+      ...TIER_DISPLAY_ORDER,
+      ...[...tierGroups.keys()].filter(
+        (slug) => !TIER_DISPLAY_ORDER.includes(slug),
+      ),
+    ];
+
+    const edmTierSections = orderedTierSlugs
+      .filter((slug) => tierGroups.has(slug))
+      .map((slug) => {
+        const group = tierGroups.get(slug);
 
         return `
               <section class="tier-section">
 
                 <div class="tier-heading">
-                  <h3>${tier.name}</h3>
+                  <h3>${group.name}</h3>
 
                   <span>
-                    ${tier.end - tier.start} cars
+                    ${group.cars.length} cars
                   </span>
                 </div>
 
                 <ol class="car-grid">
-                  ${cars}
+                  ${group.cars.join("")}
                 </ol>
 
               </section>
