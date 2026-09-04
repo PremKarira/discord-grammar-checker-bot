@@ -129,7 +129,9 @@ body {
   padding: 0;
 
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+
+  overflow: hidden;
 
   font-family:
     Inter,
@@ -153,9 +155,9 @@ body {
 
 body {
 
-  min-height: 100vh;
+  height: 100vh;
 
-  overflow-x: hidden;
+  overflow: hidden;
 
   background:
 
@@ -280,7 +282,7 @@ body {
 
   z-index: 1;
 
-  min-height: 100vh;
+  height: 100vh;
 
   display: flex;
 
@@ -288,7 +290,9 @@ body {
 
   align-items: center;
 
-  padding: 40px 20px;
+  padding: 20px;
+
+  overflow: hidden;
 
 }
 
@@ -329,7 +333,8 @@ body {
     blur(30px);
 
   animation:
-    cardIn .8s cubic-bezier(.2,.8,.2,1);
+    cardIn .8s cubic-bezier(.2,.8,.2,1)
+    forwards;
 
 }
 
@@ -342,7 +347,7 @@ body {
 
     transform:
       translateY(35px)
-      scale(.97);
+      scale(.9);
 
   }
 
@@ -352,7 +357,7 @@ body {
 
     transform:
       translateY(0)
-      scale(1);
+      scale(.82);
 
   }
 
@@ -602,9 +607,26 @@ body {
 }
 
 
+.name-wrap {
+
+  position: relative;
+
+  display: inline-block;
+
+  max-width: 100%;
+
+}
+
+
 .display-name {
 
+  position: relative;
+
+  z-index: 1;
+
   margin: 0;
+
+  padding: 4px 10px;
 
   font-size: 36px;
 
@@ -615,9 +637,20 @@ body {
 }
 
 
-.username {
+.username-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
 
   margin-top: 6px;
+
+}
+
+
+.username {
 
   color:
     var(--muted);
@@ -633,18 +666,11 @@ body {
 
 .nameplate {
 
-  position: relative;
+  position: absolute;
 
-  display: inline-flex;
+  inset: -2px -10px;
 
-  align-items: center;
-
-  min-height: 48px;
-
-  margin-top: 14px;
-
-  padding:
-    8px 17px;
+  z-index: 0;
 
   overflow: hidden;
 
@@ -711,62 +737,22 @@ body {
 }
 
 
-.nameplate-text {
-
-  position: relative;
-
-  z-index: 2;
-
-  font-size: 13px;
-
-  font-weight: 700;
-
-  color: white;
-
-}
-
-
 /* =========================================================
-   GUILD IDENTITY
+   GUILD BADGE (inline next to username)
 ========================================================= */
-
-.guild-identity {
-
-  display: none;
-
-  align-items: center;
-
-  gap: 9px;
-
-  margin-top: 13px;
-
-}
-
 
 .guild-badge {
 
-  width: 28px;
-  height: 28px;
+  display: none;
 
-  border-radius: 7px;
+  width: 18px;
+  height: 18px;
+
+  border-radius: 5px;
 
   object-fit: cover;
 
-  box-shadow:
-    0 0 15px
-    rgba(255,255,255,.12);
-
-}
-
-
-.guild-tag {
-
-  color:
-    #d2ceda;
-
-  font-size: 14px;
-
-  font-weight: 600;
+  flex-shrink: 0;
 
 }
 
@@ -1185,55 +1171,42 @@ body {
 <div class="identity">
 
 
-<h1
-  id="displayName"
-  class="display-name"
->
-  Loading...
-</h1>
+<div class="name-wrap">
 
+  <!-- NAMEPLATE (sits behind the name) -->
 
-<div
-  id="username"
-  class="username"
->
-  @loading
+  <div
+    id="nameplate"
+    class="nameplate"
+    style="display:none"
+  ></div>
+
+  <h1
+    id="displayName"
+    class="display-name"
+  >
+    Loading...
+  </h1>
+
 </div>
 
 
-<!-- NAMEPLATE -->
-
-<div
-  id="nameplate"
-  class="nameplate"
-  style="display:none"
->
+<div class="username-row">
 
   <span
-    id="nameplateText"
-    class="nameplate-text"
-  ></span>
+    id="username"
+    class="username"
+  >
+    @loading
+  </span>
 
-</div>
-
-
-<!-- PRIMARY GUILD -->
-
-<div
-  id="guildIdentity"
-  class="guild-identity"
->
+  <!-- PRIMARY GUILD BADGE -->
 
   <img
     id="guildBadge"
     class="guild-badge"
     alt=""
   >
-
-  <span
-    id="guildTag"
-    class="guild-tag"
-  ></span>
 
 </div>
 
@@ -1708,12 +1681,6 @@ async function loadProfile() {
         );
 
 
-      const text =
-        document.getElementById(
-          "nameplateText"
-        );
-
-
       /*
        * Your current palette is:
        *
@@ -1786,18 +1753,13 @@ async function loadProfile() {
         ")";
 
 
-      text.textContent =
-        nameplate.label ||
-        "Discord Nameplate";
-
-
       element.title =
         nameplate.label ||
         "Discord Nameplate";
 
 
       element.style.display =
-        "inline-flex";
+        "block";
 
     }
 
@@ -1817,25 +1779,13 @@ async function loadProfile() {
         profile.primaryGuild;
 
 
-      const container =
-        document.getElementById(
-          "guildIdentity"
-        );
-
-
       const badge =
         document.getElementById(
           "guildBadge"
         );
 
 
-      const tag =
-        document.getElementById(
-          "guildTag"
-        );
-
-
-      tag.textContent =
+      badge.title =
         guild.tag ||
         "";
 
@@ -1864,10 +1814,6 @@ async function loadProfile() {
           };
 
       }
-
-
-      container.style.display =
-        "flex";
 
     }
 
