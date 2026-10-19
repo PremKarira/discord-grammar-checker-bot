@@ -751,6 +751,24 @@ const globeIcon = `
 // ROUTE
 // ============================================================
 
+router.get("/refresh", async (req, res) => {
+  if (req.query.key !== "legacy") {
+    return res.status(403).send("Invalid refresh key.");
+  }
+
+  try {
+    await refreshCache({ forceAll: true });
+
+    res.set("Cache-Control", "no-store");
+
+    return res.redirect("/shuffle");
+  } catch (error) {
+    console.error("Error manually refreshing EDM cache:", error);
+
+    return res.status(502).send("Failed to refresh the EDM cache.");
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
     const { edmResponse, specialImportsResponse, vehicleJsonResponse } =
